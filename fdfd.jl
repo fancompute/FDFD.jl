@@ -7,7 +7,7 @@ const eta0 = sqrt(mu0/epsilon0);
 
 include("./pml.jl");
 
-export assign_val, solve_TM
+export assign_val!, solve_TM
 
 function dws(w, s, N, xrange, yrange)
 	Nx = N[1];

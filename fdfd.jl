@@ -6,8 +6,11 @@ const c0 = sqrt(1/epsilon0/mu0);
 const eta0 = sqrt(mu0/epsilon0);
 
 include("./pml.jl");
+include("./eigen.jl");
+include("./driven.jl");
+include("./modulation.jl");
 
-export assign_val!, solve_TM
+#export assign_val!
 
 function dws(w, s, N, xrange, yrange)
 	Nx = N[1];
@@ -35,6 +38,7 @@ function dws(w, s, N, xrange, yrange)
 end
 
 function grid_average(center_array, w)
+    ndims(center_array) == 1 && return (center_array+circshift(center_array, (1)))/2
     w == "x" && return (center_array+circshift(center_array, (1, 0)))/2;
     w == "y" && return (center_array+circshift(center_array, (0, 1)))/2;
     return center_array
@@ -48,42 +52,47 @@ function assign_val!(val_array, region, value, xrange, yrange)
     xc = xrange[1]+dx*(0.5:1:Nx);
     yc = yrange[1]+dy*(0.5:1:Ny);
 
-    val_array[[region(x,y) for x in xc, y in yc]] = value;
+    mask = [region(x, y) for x in xc, y in yc];
+    val_array[mask] = value;
 end
 
-function solve_TM(omega, xrange, yrange, eps_r, Jz, Npml)
-    N = size(eps_r);
+function assign_val_func!(val_array, region, value_func, xrange, yrange)
+    (Nx, Ny) = size(val_array);
+    dx = (xrange[2]-xrange[1])/Nx;
+    dy = (yrange[2]-yrange[1])/Ny;
 
-    T_eps_z = spdiagm(epsilon0*eps_r[:]);
+    xc = xrange[1]+dx*(0.5:1:Nx);
+    yc = yrange[1]+dy*(0.5:1:Ny);
 
-    jz = Jz[:];
+    mask = [region(x, y) for x in xc, y in yc];
+    value_computed = [value_func(x, y) for x in xc, y in yc];
+    val_array[mask] = value_computed[mask];
+end
 
-    Hx = zeros(Complex128, N);
-    Hy = zeros(Complex128, N);
-    Ez = zeros(Complex128, N);
+function assign_modal_source!(pol, omega, beta_est, Jz, eps_r, src_xy, src_normal, Nsrc, N, xrange, yrange)
+    src_ind_x = Int64(round((src_xy[1]-xrange[1])/(xrange[2]-xrange[1])*N[1])+1); 
+    src_ind_y = Int64(round((src_xy[2]-yrange[1])/(yrange[2]-yrange[1])*N[2])+1);
+    dx = (xrange[2]-xrange[1])/N[1];
+    dy = (yrange[2]-yrange[1])/N[2];
 
-    (Sxf, Sxb, Syf, Syb) = S_create(omega, N, Npml, xrange, yrange);
+    NN = Int64(round((Nsrc-1)/2))
+    Nsrc = 2*NN+1
+    if src_normal == "x"
+        inds_x = src_ind_x;
+        inds_y = src_ind_y+(-NN:NN);
+        dh = dy;
+    elseif src_normal == "y"
+        inds_x = src_ind_x;
+        inds_y = src_ind_y+(-NN:NN);
+        dh = dx;
+    else
+        error("Invalid src_normal value. Must be x or y")
+    end
 
-    # Construct derivates
-    Dyb = Syb*dws("y", "b", N, xrange, yrange);
-    Dxb = Sxb*dws("x", "b", N, xrange, yrange);
-    Dxf = Sxf*dws("x", "f", N, xrange, yrange);
-    Dyf = Syf*dws("y", "f", N, xrange, yrange);
-
-    # Construct system matrix
-    A = Dxf*mu0^-1*Dxb + Dyf*mu0^-1*Dyb + omega^2*T_eps_z;
-    b = 1im*omega*jz;
-
-    ez = A\b;
-
-    hx = -1/1im/omega/mu0*Dyb*ez;
-    hy = 1/1im/omega/mu0*Dxb*ez;
-
-    Hx = reshape(hx, N);
-    Hy = reshape(hy, N);
-    Ez = reshape(ez, N);
-
-    return (Ez, Hx, Hy)
+    eps_r_src = eps_r[inds_x, inds_y];
+    src_range = (0, Nsrc*dh);
+    (beta, output_vector) = solve_eigen_1D(pol, omega, beta_est, 1, src_range, eps_r_src);
+    Jz[inds_x, inds_y] = 1im*output_vector;
 end
 
 end

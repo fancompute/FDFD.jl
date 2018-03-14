@@ -1,4 +1,4 @@
-#export solve_modulation_TM
+export solve_modulation_TM
 
 function solve_modulation_TM(omega0, Omega, Nsb, xrange, yrange, eps_r, mod_reg, mod_phi, Jz0, Npml)
     N = size(eps_r);

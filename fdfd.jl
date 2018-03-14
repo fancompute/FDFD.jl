@@ -10,7 +10,8 @@ include("./eigen.jl");
 include("./driven.jl");
 include("./modulation.jl");
 
-#export assign_val!
+export assign_val!, assign_val_func!, assign_modal_source!
+export coord2ind, poyntingTM
 
 function dws(w, s, N, xrange, yrange)
 	Nx = N[1];
@@ -98,6 +99,14 @@ function coord2ind(xy, xrange, yrange, N)
     indx = Int64(round((xy[1]-xrange[1])/(xrange[2]-xrange[1])*N[1])+1); 
     indy = Int64(round((xy[2]-yrange[1])/(yrange[2]-yrange[1])*N[2])+1);
     return (indx, indy)
+end
+
+function poyntingTM(Ez, Hx, Hy)
+    Ez_x = grid_average(Ez, "x")
+    Sx = -1/2*real(Ez_x.*conj(Hy));
+    Ez_y = grid_average(Ez, "y");
+    Sy = 1/2*real(Ez_y.*conj(Hx));
+    return (Sx, Sy)
 end
 
 end

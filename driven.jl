@@ -1,4 +1,4 @@
-#export solve_driven_TM
+export solve_driven_TM
 
 function solve_driven_TM(omega, xrange, yrange, eps_r, Jz, Npml)
     N = size(eps_r);

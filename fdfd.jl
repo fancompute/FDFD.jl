@@ -70,8 +70,7 @@ function assign_val_func!(val_array, region, value_func, xrange, yrange)
 end
 
 function assign_modal_source!(pol, omega, beta_est, Jz, eps_r, src_xy, src_normal, Nsrc, N, xrange, yrange)
-    src_ind_x = Int64(round((src_xy[1]-xrange[1])/(xrange[2]-xrange[1])*N[1])+1); 
-    src_ind_y = Int64(round((src_xy[2]-yrange[1])/(yrange[2]-yrange[1])*N[2])+1);
+    (src_ind_x, src_ind_y) = coord2ind(src_xy, xrange, yrange, N);
     dx = (xrange[2]-xrange[1])/N[1];
     dy = (yrange[2]-yrange[1])/N[2];
 
@@ -93,6 +92,12 @@ function assign_modal_source!(pol, omega, beta_est, Jz, eps_r, src_xy, src_norma
     src_range = (0, Nsrc*dh);
     (beta, output_vector) = solve_eigen_1D(pol, omega, beta_est, 1, src_range, eps_r_src);
     Jz[inds_x, inds_y] = 1im*output_vector;
+end
+
+function coord2ind(xy, xrange, yrange, N)
+    indx = Int64(round((xy[1]-xrange[1])/(xrange[2]-xrange[1])*N[1])+1); 
+    indy = Int64(round((xy[2]-yrange[1])/(yrange[2]-yrange[1])*N[2])+1);
+    return (indx, indy)
 end
 
 end

@@ -5,19 +5,20 @@ const mu0 = 1.25663706e-6;
 const c0 = sqrt(1/epsilon0/mu0);
 const eta0 = sqrt(mu0/epsilon0);
 
-using Pardiso
+# using Pardiso
 
-global handle_ps;
-global solver_pardiso = false;
+# global handle_ps;
+# global solver_pardiso = false;
 
-function __init__()
-    try
-        handle_ps = PardisoSolver();
-        solver_pardiso = true;
-    catch
-        println(" # Failed to setup Pardiso solver ... will fallback to lufact()");
-    end
-end
+# function __init__()
+#     try
+#         handle_ps = PardisoSolver();
+#         solver_pardiso = true;
+#         println(" # Using Pardiso solver");
+#     catch
+#         println(" # Failed to setup Pardiso solver ... will fallback to lufact()");
+#     end
+# end
 
 include("./helpers.jl");
 include("./datastructs.jl");
@@ -30,8 +31,15 @@ include("./plot.jl");
 export assign_src!, assign_src_func!, assign_src_point!, assign_src_mode!, assign_epsr!, assign_epsr_func!
 export coord2ind, poyntingTM
 
-function dws(w, s, geom)
-    if typeof(geom) == Geometry
+"""
+    dws(w, s, geom::Geometry)
+
+Compute the derivative operators for a given geometry. w should be one of "x" or "y"
+indicating the direction of the derivative. s should be one of "f" or "b" to indicate
+forward or backward derivative, respectively.
+"""
+function dws(w, s, geom::Geometry)
+    if typeof(geom) == Geometry2D
 	    Nx = geom.N[1];
 	    Ny = geom.N[2];
     elseif typeof(geom) == Geometry1D
@@ -60,6 +68,12 @@ function dws(w, s, geom)
     end
 end
 
+
+"""
+    grid_average(center_array, w)
+
+
+"""
 function grid_average(center_array, w)
     ndims(center_array) == 1 && return (center_array+circshift(center_array, (1)))/2
     w == "x" && return (center_array+circshift(center_array, (1, 0)))/2;
@@ -67,23 +81,47 @@ function grid_average(center_array, w)
     return center_array
 end
 
-function assign_src!(geom::Geometry, region, value)
+
+"""
+    assign_src!(geom::Geometry2D, region, value)
+
+
+"""
+function assign_src!(geom::Geometry2D, region, value)
     mask = [region(x, y) for x in xc(geom), y in yc(geom)];
     geom.src[mask] = value;
 end
 
-function assign_src_point!(geom::Geometry, xy)
+
+"""
+    assign_src_point!(geom::Geometry2D, xy)
+
+
+"""
+function assign_src_point!(geom::Geometry2D, xy)
     (indx, indy) = coord2ind(geom, xy);
     geom.src[indx, indy] = 1im;
 end
 
-function assign_src_func!(geom::Geometry, region, value_func)
+
+"""
+    assign_src_func!(geom::Geometry2D, region, value_func)
+
+
+"""
+function assign_src_func!(geom::Geometry2D, region, value_func)
     mask = [region(x, y) for x in xc(geom), y in yc(geom)];
     value_computed = [value_func(x, y) for x in xc(geom), y in yc(geom)];
     geom.src[mask] = value_computed[mask];
 end
 
-function assign_src_mode!(geom::Geometry, pol, omega, beta_est, src_xy, src_normal, Nsrc)
+
+"""
+    assign_src_mode!(geom::Geometry2D, pol, omega, beta_est, src_xy, src_normal, Nsrc)
+
+
+"""
+function assign_src_mode!(geom::Geometry2D, pol, omega, beta_est, src_xy, src_normal, Nsrc)
     (src_ind_x, src_ind_y) = coord2ind(geom, src_xy);
 
     NN = Int64(round((Nsrc-1)/2))
@@ -107,17 +145,42 @@ function assign_src_mode!(geom::Geometry, pol, omega, beta_est, src_xy, src_norm
     geom.src[inds_x, inds_y] = 1im*output_vector;
 end
 
+
+"""
+    assign_epsr!(geom::Geometry, region, value)
+
+
+"""
 function assign_epsr!(geom::Geometry, region, value)
-    mask = [region(x, y) for x in xc(geom), y in yc(geom)];
+    if typeof(geom) == Geometry2D
+        mask = [region(x, y) for x in xc(geom), y in yc(geom)];
+    elseif typeof(geom) == Geometry1D
+        mask = [region(x) for x in xc(geom)];
+    else
+        error("Unkown geometry type!")
+    end
+
     geom.epsr[mask] = value;
 end
 
+
+"""
+    assign_epsr_func!(geom::Geometry, region, value_func)
+
+
+"""
 function assign_epsr_func!(geom::Geometry, region, value_func)
     mask = [region(x, y) for x in xc(geom), y in yc(geom)];
     value_computed = [value_func(x, y) for x in xc(geom), y in yc(geom)];
     geom.epsr[mask] = value_computed[mask];
 end
 
+
+"""
+    poyntingTM(Ez, Hx, Hy)
+
+
+"""
 function poyntingTM(Ez, Hx, Hy)
     Ez_x = grid_average(Ez, "x")
     Sx = -1/2*real(Ez_x.*conj(Hy));

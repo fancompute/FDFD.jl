@@ -1,6 +1,6 @@
 export solve_driven_TM
 
-function solve_driven_TM(geom, omega)
+function solve_driven_TM(geom::Geometry2D, omega)
     T_eps_z = spdiagm(epsilon0*geom.epsr[:]);
 
     Hx = zeros(Complex128, geom.N);

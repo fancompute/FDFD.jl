@@ -2,6 +2,8 @@ export solve_modulation_TM
 export assign_mod_delta!, assign_mod_delta_func!
 export assign_mod_phi!, assign_mod_phi_func!
 
+using Pardiso
+
 function assign_mod_delta!(mod::Modulator, region, value)
     mask = [region(x, y) for x in xc(mod.geom), y in yc(mod.geom)];
     mod.epsr_delta[mask] = value;
@@ -71,11 +73,22 @@ function solve_modulation_TM(mod::Modulator, omega0)
         A = As[1]; 
     end
 
-    if solver_pardiso
-        @time ez = solve(handle_ps, A, b);
-    else
-        @time ez = lufact(A)\b;
-    end
+    handle_ps = PardisoSolver();
+    @time ez = solve(handle_ps, A, b);
+    
+    #try
+    #    handle_ps = PardisoSolver();
+    #    @time ez = solve(handle_ps, A, b);
+    #catch
+    #    println(" # Pardiso failed ... falling back to lufact()");
+    #    @time ez = lufact(A)\b;
+    #end
+
+    # if solver_pardiso
+    #    @time ez = solve(handle_ps, A, b);
+    # else
+    #    @time ez = lufact(A)\b;
+    # end
 
     for i = 1:(2*Nsb+1)
         Ez[i,:,:] = reshape(ez[(i-1)*M+1:i*M], geom.N);

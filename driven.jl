@@ -1,36 +1,32 @@
 export solve_driven_TM
 
-function solve_driven_TM(omega, xrange, yrange, eps_r, Jz, Npml)
-    N = size(eps_r);
+function solve_driven_TM(geom, omega)
+    T_eps_z = spdiagm(epsilon0*geom.epsr[:]);
 
-    T_eps_z = spdiagm(epsilon0*eps_r[:]);
+    Hx = zeros(Complex128, geom.N);
+    Hy = zeros(Complex128, geom.N);
+    Ez = zeros(Complex128, geom.N);
 
-    jz = Jz[:];
-
-    Hx = zeros(Complex128, N);
-    Hy = zeros(Complex128, N);
-    Ez = zeros(Complex128, N);
-
-    (Sxf, Sxb, Syf, Syb) = S_create(omega, N, Npml, xrange, yrange);
+    (Sxf, Sxb, Syf, Syb) = S_create(omega, geom.N, geom.Npml, geom.xrange, geom.yrange);
 
     # Construct derivates
-    Dxb = Sxb*dws("x", "b", N, xrange, yrange);
-    Dxf = Sxf*dws("x", "f", N, xrange, yrange);
-    Dyb = Syb*dws("y", "b", N, xrange, yrange);
-    Dyf = Syf*dws("y", "f", N, xrange, yrange);
+    Dxb = Sxb*dws("x", "b", geom);
+    Dxf = Sxf*dws("x", "f", geom);
+    Dyb = Syb*dws("y", "b", geom);
+    Dyf = Syf*dws("y", "f", geom);
 
     # Construct system matrix
     A = Dxf*mu0^-1*Dxb + Dyf*mu0^-1*Dyb + omega^2*T_eps_z;
-    b = 1im*omega*jz;
+    b = 1im*omega*geom.src[:];
 
     ez = A\b;
 
     hx = -1/1im/omega/mu0*Dyb*ez;
     hy = 1/1im/omega/mu0*Dxb*ez;
 
-    Hx = reshape(hx, N);
-    Hy = reshape(hy, N);
-    Ez = reshape(ez, N);
+    Hx = reshape(hx, geom.N);
+    Hy = reshape(hy, geom.N);
+    Ez = reshape(ez, geom.N);
 
     return (Ez, Hx, Hy)
 end

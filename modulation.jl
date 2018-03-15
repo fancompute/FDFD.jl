@@ -71,7 +71,11 @@ function solve_modulation_TM(mod::Modulator, omega0)
         A = As[1]; 
     end
 
-    @time ez = lufact(A)\b;
+    if solver_pardiso
+        @time ez = solve(handle_ps, A, b);
+    else
+        @time ez = lufact(A)\b;
+    end
 
     for i = 1:(2*Nsb+1)
         Ez[i,:,:] = reshape(ez[(i-1)*M+1:i*M], geom.N);

@@ -19,7 +19,11 @@ function solve_driven_TM(geom, omega)
     A = Dxf*mu0^-1*Dxb + Dyf*mu0^-1*Dyb + omega^2*T_eps_z;
     b = 1im*omega*geom.src[:];
 
-    ez = A\b;
+    if solver_pardiso
+        ez = solve(handle_ps, A, b);
+    else
+        ez = lufact(A)\b;
+    end
 
     hx = -1/1im/omega/mu0*Dyb*ez;
     hy = 1/1im/omega/mu0*Dxb*ez;

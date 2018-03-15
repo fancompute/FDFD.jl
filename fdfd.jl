@@ -5,6 +5,20 @@ const mu0 = 1.25663706e-6;
 const c0 = sqrt(1/epsilon0/mu0);
 const eta0 = sqrt(mu0/epsilon0);
 
+using Pardiso
+
+global handle_ps;
+global solver_pardiso = false;
+
+function __init__()
+    try
+        handle_ps = PardisoSolver();
+        solver_pardiso = true;
+    catch
+        println(" # Failed to setup Pardiso solver ... will fallback to lufact()");
+    end
+end
+
 include("./helpers.jl");
 include("./datastructs.jl");
 include("./pml.jl");

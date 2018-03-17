@@ -15,7 +15,7 @@ mutable struct Geometry1D <: Geometry
 	function Geometry1D(dh::Real, xrange::Tuple{Real,Real})
 		Nx = Int64(round((xrange[2]-xrange[1])/dh));
 		epsr = ones(Complex128, Nx);
-		println(" # Generated grid size: ", Nx);
+		println("# Geometry: grid size of ", Nx);
 		return new(Nx, xrange, epsr)
 	end
 end
@@ -42,7 +42,7 @@ mutable struct Geometry2D <: Geometry
 		Nx = Int64(round((xrange[2]-xrange[1])/dh));
 		Ny = Int64(round((yrange[2]-yrange[1])/dh));
 		N = (Nx, Ny);
-		println(" # Generated grid size: ", N);
+		println("# Geometry: grid size of ", N);
 		return Geometry2D(N, Npml, xrange, yrange);
 	end
 

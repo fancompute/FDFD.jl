@@ -3,7 +3,7 @@ export solve_modulation_TM
 export assign_mod_delta!, assign_mod_delta_func!
 export assign_mod_phi!, assign_mod_phi_func!
 
-using Pardiso, TimeIt
+using Pardiso
 
 mutable struct Modulator
     geom::Geometry2D

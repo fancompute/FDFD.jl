@@ -45,6 +45,7 @@ function solve_modulation_TM(mod::Modulator, omega0)
     geom = mod.geom;
     M = prod(geom.N);
     Nsb = mod.Nsb
+    println("# Solver: ", @sprintf("%.1E",(2*Nsb+1)*M), " unknowns");
 
     n_sb = -Nsb:1:Nsb; 
     omega = omega0 + mod.Omega*n_sb; 
@@ -69,16 +70,16 @@ function solve_modulation_TM(mod::Modulator, omega0)
         b0 = 1im*omega[Nsb+1]*geom.src[:]; #TODO: check reshape vs [:]
         b = zeros(Complex128, M*(2*Nsb+1),1); 
         b[(Nsb*M)+1:(Nsb+1)*M,1] = b0; 
+    end
 
+    println("# Solver: constructing system matrices...");
+    @time begin
         As  = Array{SparseMatrixCSC}(2*Nsb+1);
         Sxf = Array{SparseMatrixCSC}(2*Nsb+1);
         Sxb = Array{SparseMatrixCSC}(2*Nsb+1);
         Syf = Array{SparseMatrixCSC}(2*Nsb+1);
         Syb = Array{SparseMatrixCSC}(2*Nsb+1);
-    end
 
-    println("# Solver: constructing system matrices...");
-    @time begin
         for i = 1:(2*Nsb + 1)
             (Sxf[i], Sxb[i], Syf[i], Syb[i]) = S_create(omega[i], geom.N, geom.Npml, geom.xrange, geom.yrange);
             As[i] = Sxb[i]*Dxb*mu0^-1*Sxf[i]*Dxf + Syb[i]*Dyb*mu0^-1*Syf[i]*Dyf + omega[i]^2*T_eps;

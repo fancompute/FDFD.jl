@@ -1,8 +1,23 @@
+export Modulator
 export solve_modulation_TM
 export assign_mod_delta!, assign_mod_delta_func!
 export assign_mod_phi!, assign_mod_phi_func!
 
 using Pardiso
+
+mutable struct Modulator
+    geom::Geometry2D
+    Omega::Real
+    Nsb::Integer
+    epsr_delta::Array{Complex,2}
+    epsr_delta_phi::Array{Real,2}
+
+    function Modulator(geom::Geometry2D, Omega::Real, Nsb::Integer)
+        epsr_delta = zeros(Complex128, geom.N)
+        epsr_delta_phi = zeros(Float64, geom.N)
+        return new(geom, Omega, Nsb, epsr_delta, epsr_delta_phi)
+    end
+end
 
 function assign_mod_delta!(mod::Modulator, region, value)
     mask = [region(x, y) for x in xc(mod.geom), y in yc(mod.geom)];
@@ -73,22 +88,22 @@ function solve_modulation_TM(mod::Modulator, omega0)
         A = As[1]; 
     end
 
-    handle_ps = PardisoSolver();
-    @time ez = solve(handle_ps, A, b);
-    
-    #try
-    #    handle_ps = PardisoSolver();
-    #    @time ez = solve(handle_ps, A, b);
-    #catch
-    #    println(" # Pardiso failed ... falling back to lufact()");
-    #    @time ez = lufact(A)\b;
-    #end
+    #handle_ps = PardisoSolver();
+    #@time ez = solve(handle_ps, A, b);
 
-    # if solver_pardiso
-    #    @time ez = solve(handle_ps, A, b);
-    # else
-    #    @time ez = lufact(A)\b;
-    # end
+    pardiso_success = false;
+    try
+        ez = zeros(Complex128, M*(2*Nsb+1),1); 
+        handle_ps = PardisoSolver();
+        @time solve!(handle_ps, ez, A, b);
+        pardiso_success = true;
+    catch
+        println(" # Pardiso failed ... falling back to lufact()");
+    end
+
+    if ~pardiso_success
+        @time ez = lufact(A)\b;
+    end
 
     for i = 1:(2*Nsb+1)
         Ez[i,:,:] = reshape(ez[(i-1)*M+1:i*M], geom.N);

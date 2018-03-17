@@ -5,21 +5,6 @@ const mu0 = 1.25663706e-6;
 const c0 = sqrt(1/epsilon0/mu0);
 const eta0 = sqrt(mu0/epsilon0);
 
-# using Pardiso
-
-# global handle_ps;
-# global solver_pardiso = false;
-
-# function __init__()
-#     try
-#         handle_ps = PardisoSolver();
-#         solver_pardiso = true;
-#         println(" # Using Pardiso solver");
-#     catch
-#         println(" # Failed to setup Pardiso solver ... will fallback to lufact()");
-#     end
-# end
-
 include("./helpers.jl");
 include("./datastructs.jl");
 include("./pml.jl");
@@ -29,7 +14,7 @@ include("./modulation.jl");
 include("./plot.jl");
 
 export assign_src!, assign_src_func!, assign_src_point!, assign_src_mode!, assign_epsr!, assign_epsr_func!
-export coord2ind, poyntingTM
+export coord2ind, poyntingTM, flux_direction
 
 """
     dws(w, s, geom::Geometry)
@@ -187,6 +172,31 @@ function poyntingTM(Ez, Hx, Hy)
     Ez_y = grid_average(Ez, "y");
     Sy = 1/2*real(Ez_y.*conj(Hx));
     return (Sx, Sy)
+end
+
+function flux_direction(dir_normal, pt1, pt2, geom, Ez, Hx, Hy)
+    if dir_normal == "x"
+        (ind0, _) = coord2ind(geom, (pt1, geom.yrange[1]));
+        (ind1, _) = coord2ind(geom, (pt2, geom.yrange[1]));
+        dh = dy(geom);
+    elseif dir_normal == "y"
+        error("Not implemented yet...")
+    end
+    ind_cells = ind0:ind1;
+    N_cells = ind1-ind0+1;
+
+    N_freqs = size(Ez)[1];
+    Px = zeros(Real,N_freqs,N_cells);
+
+    for i = 1:N_freqs
+        (Sx, _) = poyntingTM(Ez[i,:,:], Hx[i,:,:], Hy[i,:,:]);
+        Px[i, :] = sum(Sx[ind0:ind1,:],2)*dh;
+    end
+
+    x_coords = xc(geom);
+    x_coords = x_coords[ind0:ind1];
+    Px = Px.';
+    return (x_coords, Px)
 end
 
 end

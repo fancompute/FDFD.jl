@@ -3,7 +3,7 @@ export solve_modulation_TM
 export assign_mod_delta!, assign_mod_delta_func!
 export assign_mod_phi!, assign_mod_phi_func!
 
-using Pardiso
+using Pardiso, TimerOutputs
 
 mutable struct Modulator
     geom::Geometry2D
@@ -42,6 +42,8 @@ function assign_mod_phi_func!(mod::Modulator, region, value_func)
 end
 
 function solve_modulation_TM(mod::Modulator, omega0)
+    const to = TimerOutput()
+
     geom = mod.geom;
     M = prod(geom.N);
     Nsb = mod.Nsb
@@ -50,8 +52,8 @@ function solve_modulation_TM(mod::Modulator, omega0)
     n_sb = -Nsb:1:Nsb; 
     omega = omega0 + mod.Omega*n_sb; 
     
-    println("# Solver: setup and allocation...");
-    @time begin
+    println("# Solver: setup...");
+    @timeit to "setup" begin
         Ez = zeros(Complex128, 2*Nsb+1, geom.N[1], geom.N[2]);
         Hx = zeros(Complex128, 2*Nsb+1, geom.N[1], geom.N[2]);
         Hy = zeros(Complex128, 2*Nsb+1, geom.N[1], geom.N[2]);
@@ -73,7 +75,7 @@ function solve_modulation_TM(mod::Modulator, omega0)
     end
 
     println("# Solver: constructing system matrices...");
-    @time begin
+    @timeit to "system mats" begin
         As  = Array{SparseMatrixCSC}(2*Nsb+1);
         Sxf = Array{SparseMatrixCSC}(2*Nsb+1);
         Sxb = Array{SparseMatrixCSC}(2*Nsb+1);
@@ -81,26 +83,36 @@ function solve_modulation_TM(mod::Modulator, omega0)
         Syb = Array{SparseMatrixCSC}(2*Nsb+1);
 
         for i = 1:(2*Nsb + 1)
-            (Sxf[i], Sxb[i], Syf[i], Syb[i]) = S_create(omega[i], geom.N, geom.Npml, geom.xrange, geom.yrange);
-            As[i] = Sxb[i]*Dxb*mu0^-1*Sxf[i]*Dxf + Syb[i]*Dyb*mu0^-1*Syf[i]*Dyf + omega[i]^2*T_eps;
+            @timeit to "S" begin
+                (Sxf[i], Sxb[i], Syf[i], Syb[i]) = S_create(omega[i], geom.N, geom.Npml, geom.xrange, geom.yrange);
+            end
+            @timeit to "A" begin
+                As[i] = Sxb[i]*Dxb*mu0^-1*Sxf[i]*Dxf + Syb[i]*Dyb*mu0^-1*Syf[i]*Dyf + omega[i]^2*T_eps;
+            end
         end
     end
 
     println("# Solver: constructing coupling matrices...");
-    @time begin
+    @timeit to "coupling mats" begin
         if Nsb > 0
-            template_Cp = spdiagm([0.5*omega[1:end-1].^2], [1], 2*Nsb+1, 2*Nsb+1)
-            template_Cm = spdiagm([0.5*omega[2:end].^2],  [-1], 2*Nsb+1, 2*Nsb+1)
-            Cp = kron(template_Cp, T_delta*conj(T_phi));
-            Cm = kron(template_Cm, T_delta*T_phi);
-            A = blkdiag(As...)+Cp+Cm;
+            @timeit to "Cp" begin
+                template_Cp = spdiagm([0.5*omega[1:end-1].^2], [1], 2*Nsb+1, 2*Nsb+1);
+                Cp = kron(template_Cp, T_delta*conj(T_phi));
+            end
+            @timeit to "Cm" begin
+                template_Cm = spdiagm([0.5*omega[2:end].^2],  [-1], 2*Nsb+1, 2*Nsb+1);
+                Cm = kron(template_Cm, T_delta*T_phi);
+            end
+            @timeit to "A" begin
+                A = blkdiag(As...)+Cp+Cm;
+            end
         else
             A = As[1]; 
         end
     end
 
     println("# Solver: solving...");
-    @time begin
+    @timeit to "solve" begin
         pardiso_success = false;
         try
             ez = zeros(Complex128, M*(2*Nsb+1),1); 
@@ -117,7 +129,7 @@ function solve_modulation_TM(mod::Modulator, omega0)
     end
 
     println("# Solver: post-processing...");
-    @time begin
+    @timeit to "post-process" begin
         for i = 1:(2*Nsb+1)
             Ez[i,:,:] = reshape(ez[(i-1)*M+1:i*M], geom.N);
             Hx[i,:,:] = reshape(-1/1im/omega[i]*mu0^-1*Syf[i]*Dyf*ez[(i-1)*M+1:i*M], geom.N); 
@@ -125,5 +137,6 @@ function solve_modulation_TM(mod::Modulator, omega0)
         end
     end
 
+    print(to);
     return (Ez, Hx, Hy, omega)
 end

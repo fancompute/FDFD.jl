@@ -43,17 +43,18 @@ end
 
 function solve_modulation_TM(mod::Modulator, omega0)
     const to = TimerOutput()
-
-    geom = mod.geom;
-    M = prod(geom.N);
-    Nsb = mod.Nsb
-    println("# Solver: ", @sprintf("%.1E",(2*Nsb+1)*M), " unknowns");
-
-    n_sb = -Nsb:1:Nsb; 
-    omega = omega0 + mod.Omega*n_sb; 
-    
-    println("# Solver: setup...");
     @timeit to "setup" begin
+        println("# Solver: setup...");
+
+        geom = mod.geom;
+        M = prod(geom.N);
+        Nsb = mod.Nsb
+
+        println("# Solver: ", @sprintf("%.1E",(2*Nsb+1)*M), " unknowns");
+
+        n_sb = -Nsb:1:Nsb; 
+        omega = omega0 + mod.Omega*n_sb; 
+    
         Ez = zeros(Complex128, 2*Nsb+1, geom.N[1], geom.N[2]);
         Hx = zeros(Complex128, 2*Nsb+1, geom.N[1], geom.N[2]);
         Hy = zeros(Complex128, 2*Nsb+1, geom.N[1], geom.N[2]);
@@ -74,42 +75,36 @@ function solve_modulation_TM(mod::Modulator, omega0)
         b[(Nsb*M)+1:(Nsb+1)*M,1] = b0; 
     end
 
-    println("# Solver: constructing system matrices...");
-    @timeit to "system mats" begin
+    println("# Solver: starting matrix assembly");
+    @timeit to "matrix assembly" begin
         As  = Array{SparseMatrixCSC}(2*Nsb+1);
         Sxf = Array{SparseMatrixCSC}(2*Nsb+1);
         Sxb = Array{SparseMatrixCSC}(2*Nsb+1);
         Syf = Array{SparseMatrixCSC}(2*Nsb+1);
         Syb = Array{SparseMatrixCSC}(2*Nsb+1);
 
+        println("#         system matrices...");
         for i = 1:(2*Nsb + 1)
-            @timeit to "S" begin
-                (Sxf[i], Sxb[i], Syf[i], Syb[i]) = S_create(omega[i], geom.N, geom.Npml, geom.xrange, geom.yrange);
-            end
-            @timeit to "A" begin
-                As[i] = Sxb[i]*Dxb*mu0^-1*Sxf[i]*Dxf + Syb[i]*Dyb*mu0^-1*Syf[i]*Dyf + omega[i]^2*T_eps;
-            end
+            @timeit to "S_i" (Sxf[i], Sxb[i], Syf[i], Syb[i]) = S_create(omega[i], geom.N, geom.Npml, geom.xrange, geom.yrange);
+            @timeit to "A_i" As[i] = Sxb[i]*Dxb*mu0^-1*Sxf[i]*Dxf + Syb[i]*Dyb*mu0^-1*Syf[i]*Dyf + omega[i]^2*T_eps;
         end
-    end
-
-    println("# Solver: constructing coupling matrices...");
-    @timeit to "coupling mats" begin
         if Nsb > 0
-            @timeit to "Cp" begin
+            println("#         coupling matrices...");
+            @timeit to "C_p" begin
                 template_Cp = spdiagm([0.5*omega[1:end-1].^2], [1], 2*Nsb+1, 2*Nsb+1);
                 Cp = kron(template_Cp, T_delta*conj(T_phi));
             end
-            @timeit to "Cm" begin
+            @timeit to "C_m" begin
                 template_Cm = spdiagm([0.5*omega[2:end].^2],  [-1], 2*Nsb+1, 2*Nsb+1);
                 Cm = kron(template_Cm, T_delta*T_phi);
             end
-            @timeit to "A" begin
-                A = blkdiag(As...)+Cp+Cm;
-            end
+            println("#         assembling...");
+            @timeit to "A" A = blkdiag(As...) + Cp + Cm;
         else
             A = As[1]; 
         end
     end
+
 
     println("# Solver: solving...");
     @timeit to "solve" begin
@@ -128,8 +123,8 @@ function solve_modulation_TM(mod::Modulator, omega0)
         end
     end
 
-    println("# Solver: post-processing...");
-    @timeit to "post-process" begin
+    println("# Solver: post processing...");
+    @timeit to "post processing" begin
         for i = 1:(2*Nsb+1)
             Ez[i,:,:] = reshape(ez[(i-1)*M+1:i*M], geom.N);
             Hx[i,:,:] = reshape(-1/1im/omega[i]*mu0^-1*Syf[i]*Dyf*ez[(i-1)*M+1:i*M], geom.N); 
@@ -137,6 +132,7 @@ function solve_modulation_TM(mod::Modulator, omega0)
         end
     end
 
-    print(to);
+    show(to);
+    println("");
     return (Ez, Hx, Hy, omega)
 end

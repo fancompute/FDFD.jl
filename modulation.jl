@@ -142,7 +142,10 @@ function solve_modulation_TM(mod::Modulator, omega0; verbose=true)
     end
     end
 
-    show(to);
-    println("");
+    if verbose
+    	show(to);
+    	println("");
+    end
+    
     return (Ez, Hx, Hy, omega)
 end

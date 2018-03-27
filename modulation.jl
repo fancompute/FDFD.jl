@@ -41,99 +41,105 @@ function assign_mod_phi_func!(mod::Modulator, region, value_func)
     mod.epsr_delta_phi[mask] = value_computed[mask];
 end
 
-function solve_modulation_TM(mod::Modulator, omega0)
+function solve_modulation_TM(mod::Modulator, omega0; verbose=true)
     const to = TimerOutput()
+
     @timeit to "setup" begin
-        println("# Solver: setup...");
+    println("# Solver: setup...");
 
-        geom = mod.geom;
-        M = prod(geom.N);
-        Nsb = mod.Nsb
+    geom = mod.geom;
+    M = prod(geom.N);
+    Nsb = mod.Nsb
 
-        println("# Solver: ", @sprintf("%.1E",(2*Nsb+1)*M), " unknowns");
+    println("# Solver: ", @sprintf("%.1E",(2*Nsb+1)*M), " unknowns");
 
-        n_sb = -Nsb:1:Nsb; 
-        omega = omega0 + mod.Omega*n_sb; 
-    
-        Ez = zeros(Complex128, 2*Nsb+1, geom.N[1], geom.N[2]);
-        Hx = zeros(Complex128, 2*Nsb+1, geom.N[1], geom.N[2]);
-        Hy = zeros(Complex128, 2*Nsb+1, geom.N[1], geom.N[2]);
+    n_sb = -Nsb:1:Nsb; 
+    omega = omega0 + mod.Omega*n_sb; 
 
-        T_eps = spdiagm(epsilon0*geom.epsr[:]); #TODO: check reshape vs [:]
-        T_delta = spdiagm(epsilon0*mod.epsr_delta[:]); #TODO: check reshape vs [:]
-        T_phi = spdiagm(exp.(1im*mod.epsr_delta_phi[:])); #TODO: check reshape vs [:]
+    Ez = zeros(Complex128, 2*Nsb+1, geom.N[1], geom.N[2]);
+    Hx = zeros(Complex128, 2*Nsb+1, geom.N[1], geom.N[2]);
+    Hy = zeros(Complex128, 2*Nsb+1, geom.N[1], geom.N[2]);
 
-        # Construct derivates
-        Dxb = dws("x", "b", geom);
-        Dxf = dws("x", "f", geom);
-        Dyb = dws("y", "b", geom);
-        Dyf = dws("y", "f", geom); 
+    T_eps = spdiagm(epsilon0*geom.epsr[:]); #TODO: check reshape vs [:]
+    T_delta = spdiagm(epsilon0*mod.epsr_delta[:]); #TODO: check reshape vs [:]
+    T_phi = spdiagm(exp.(1im*mod.epsr_delta_phi[:])); #TODO: check reshape vs [:]
 
-        # Reshape Mz into a vector
-        b0 = 1im*omega[Nsb+1]*geom.src[:]; #TODO: check reshape vs [:]
-        b = zeros(Complex128, M*(2*Nsb+1),1); 
-        b[(Nsb*M)+1:(Nsb+1)*M,1] = b0; 
+    # Construct derivates
+    Dxb = dws("x", "b", geom);
+    Dxf = dws("x", "f", geom);
+    Dyb = dws("y", "b", geom);
+    Dyf = dws("y", "f", geom); 
+
+    # Reshape Mz into a vector
+    b0 = 1im*omega[Nsb+1]*geom.src[:]; #TODO: check reshape vs [:]
+    b = zeros(Complex128, M*(2*Nsb+1),1); 
+    b[(Nsb*M)+1:(Nsb+1)*M,1] = b0; 
     end
 
     println("# Solver: starting matrix assembly");
     @timeit to "matrix assembly" begin
-        As  = Array{SparseMatrixCSC}(2*Nsb+1);
-        Sxf = Array{SparseMatrixCSC}(2*Nsb+1);
-        Sxb = Array{SparseMatrixCSC}(2*Nsb+1);
-        Syf = Array{SparseMatrixCSC}(2*Nsb+1);
-        Syb = Array{SparseMatrixCSC}(2*Nsb+1);
+    As  = Array{SparseMatrixCSC}(2*Nsb+1);
+    Sxf = Array{SparseMatrixCSC}(2*Nsb+1);
+    Sxb = Array{SparseMatrixCSC}(2*Nsb+1);
+    Syf = Array{SparseMatrixCSC}(2*Nsb+1);
+    Syb = Array{SparseMatrixCSC}(2*Nsb+1);
 
-        println("#         system matrices...");
-        for i = 1:(2*Nsb + 1)
-            @timeit to "S_i" (Sxf[i], Sxb[i], Syf[i], Syb[i]) = S_create(omega[i], geom.N, geom.Npml, geom.xrange, geom.yrange);
-            @timeit to "A_i" As[i] = Sxb[i]*Dxb*mu0^-1*Sxf[i]*Dxf + Syb[i]*Dyb*mu0^-1*Syf[i]*Dyf + omega[i]^2*T_eps;
+    println("#         system matrices...");
+    for i = 1:(2*Nsb + 1)
+        @timeit to "S_i" (Sxf[i], Sxb[i], Syf[i], Syb[i]) = S_create(omega[i], geom.N, geom.Npml, geom.xrange, geom.yrange);
+        @timeit to "A_i" As[i] = Sxb[i]*Dxb*mu0^-1*Sxf[i]*Dxf + Syb[i]*Dyb*mu0^-1*Syf[i]*Dyf + omega[i]^2*T_eps;
+    end
+    if Nsb > 0
+        println("#         coupling matrices...");
+        @timeit to "C_p" begin
+            template_Cp = spdiagm([0.5*omega[1:end-1].^2], [1], 2*Nsb+1, 2*Nsb+1);
+            Cp = kron(template_Cp, T_delta*conj(T_phi));
         end
-        if Nsb > 0
-            println("#         coupling matrices...");
-            @timeit to "C_p" begin
-                template_Cp = spdiagm([0.5*omega[1:end-1].^2], [1], 2*Nsb+1, 2*Nsb+1);
-                Cp = kron(template_Cp, T_delta*conj(T_phi));
-            end
-            @timeit to "C_m" begin
-                template_Cm = spdiagm([0.5*omega[2:end].^2],  [-1], 2*Nsb+1, 2*Nsb+1);
-                Cm = kron(template_Cm, T_delta*T_phi);
-            end
-            println("#         assembling...");
-            @timeit to "A" A = blkdiag(As...) + Cp + Cm;
-        else
-            A = As[1]; 
+        @timeit to "C_m" begin
+            template_Cm = spdiagm([0.5*omega[2:end].^2],  [-1], 2*Nsb+1, 2*Nsb+1);
+            Cm = kron(template_Cm, T_delta*T_phi);
         end
+        println("#         assembling...");
+        @timeit to "A" A = blkdiag(As...) + Cp + Cm;
+    else
+        A = As[1]; 
+    end
     end
 
 
     println("# Solver: solving...");
     @timeit to "solve" begin
-        pardiso_success = false;
-        try
-            ez = zeros(Complex128, M*(2*Nsb+1),1); 
-            handle_ps = PardisoSolver();
-            set_matrixtype!(handle_ps, Pardiso.COMPLEX_NONSYM);
-            set_msglvl!(handle_ps, Pardiso.MESSAGE_LEVEL_ON);
-            set_solver!(handle_ps, Pardiso.DIRECT_SOLVER);
-            pardisoinit(handle_ps);
-            solve!(handle_ps, ez, A, b);
-            pardiso_success = true;
-        catch
-            println("# Solver: pardiso failed, falling back to lufact()");
+    pardiso_success = false;
+    try
+        ez = zeros(Complex128, M*(2*Nsb+1),1); 
+        ps = PardisoSolver();
+        if verbose
+        	set_msglvl!(ps, Pardiso.MESSAGE_LEVEL_ON)
         end
+        set_matrixtype!(ps, Pardiso.COMPLEX_NONSYM);
+        set_msglvl!(ps, Pardiso.MESSAGE_LEVEL_ON);
+        set_solver!(ps, Pardiso.DIRECT_SOLVER);
+        pardisoinit(ps);
+        solve!(ps, ez, A, b);
+        pardiso_success = true;
+        println("# Solver: pardiso performed %d iterative refinement steps", get_iparm(ps, 7));
+        #println("# Solver: maximum residual for the solution X is %0.3g", maximum(abs(A*ez-b)));
+    catch
+        println("# Solver: pardiso failed, falling back to lufact()");
+    end
 
-        if ~pardiso_success
-            ez = lufact(A)\b;
-        end
+    if ~pardiso_success
+        ez = lufact(A)\b;
+    end
     end
 
     println("# Solver: post processing...");
     @timeit to "post processing" begin
-        for i = 1:(2*Nsb+1)
-            Ez[i,:,:] = reshape(ez[(i-1)*M+1:i*M], geom.N);
-            Hx[i,:,:] = reshape(-1/1im/omega[i]*mu0^-1*Syf[i]*Dyf*ez[(i-1)*M+1:i*M], geom.N); 
-            Hy[i,:,:] = reshape(1/1im/omega[i]*mu0^-1*Sxf[i]*Dxf*ez[(i-1)*M+1:i*M], geom.N); 
-        end
+    for i = 1:(2*Nsb+1)
+        Ez[i, :, :] = reshape(ez[(i-1)*M+1:i*M], geom.N);
+        Hx[i, :, :] = reshape(-1/1im/omega[i]*mu0^-1*Syf[i]*Dyf*ez[(i-1)*M+1:i*M], geom.N); 
+        Hy[i, :, :] = reshape(1/1im/omega[i]*mu0^-1*Sxf[i]*Dxf*ez[(i-1)*M+1:i*M], geom.N); 
+    end
     end
 
     show(to);

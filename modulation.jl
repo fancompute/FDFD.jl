@@ -112,6 +112,10 @@ function solve_modulation_TM(mod::Modulator, omega0)
         try
             ez = zeros(Complex128, M*(2*Nsb+1),1); 
             handle_ps = PardisoSolver();
+            set_matrixtype!(handle_ps, Pardiso.COMPLEX_NONSYM);
+            set_msglvl!(handle_ps, Pardiso.MESSAGE_LEVEL_ON);
+            set_solver!(handle_ps, Pardiso.DIRECT_SOLVER);
+            pardisoinit(handle_ps);
             solve!(handle_ps, ez, A, b);
             pardiso_success = true;
         catch

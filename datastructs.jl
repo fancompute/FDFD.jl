@@ -1,4 +1,4 @@
-export Geometry, Geometry1D, Geometry2D, Modulator
+export Geometry, Geometry1D, Geometry2D
 export M, dx, dy, xc, yc, xe, ye, coord2ind
 
 abstract type Geometry end

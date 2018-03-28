@@ -1,5 +1,7 @@
 export unwrap
 
+iscallable(f) = !isempty(methods(f));
+
 function unwrap(v, inplace=false)
   # currently assuming an array
   unwrapped = inplace ? v : copy(v)

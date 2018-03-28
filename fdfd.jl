@@ -60,11 +60,11 @@ end
 
 
 """
-function grid_average(center_array, w)
-    ndims(center_array) == 1 && return (center_array+circshift(center_array, (1)))/2
-    w == "x" && return (center_array+circshift(center_array, (1, 0)))/2;
-    w == "y" && return (center_array+circshift(center_array, (0, 1)))/2;
-    return center_array
+function grid_average(centerarray, w)
+    ndims(centerarray) == 1 && return (centerarray+circshift(centerarray, (1)))/2
+    w == "x" && return (centerarray+circshift(centerarray, (1, 0)))/2;
+    w == "y" && return (centerarray+circshift(centerarray, (0, 1)))/2;
+    return centerarray
 end
 
 
@@ -75,7 +75,12 @@ end
 """
 function assign_src!(geom::Geometry2D, region, value)
     mask = [region(x, y) for x in xc(geom), y in yc(geom)];
-    geom.src[mask] = value;
+    if iscallable(value)
+        value_assigned = [value(x, y) for x in xc(geom), y in yc(geom)];
+    else
+        value_assigned = value;
+    end
+    geom.src[mask] = value_assigned;
 end
 
 
@@ -87,18 +92,6 @@ end
 function assign_src_point!(geom::Geometry2D, xy)
     (indx, indy) = coord2ind(geom, xy);
     geom.src[indx, indy] = 1im;
-end
-
-
-"""
-    assign_src_func!(geom::Geometry2D, region, value_func)
-
-
-"""
-function assign_src_func!(geom::Geometry2D, region, value_func)
-    mask = [region(x, y) for x in xc(geom), y in yc(geom)];
-    value_computed = [value_func(x, y) for x in xc(geom), y in yc(geom)];
-    geom.src[mask] = value_computed[mask];
 end
 
 

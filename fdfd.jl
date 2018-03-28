@@ -118,8 +118,8 @@ function assign_src_mode!(geom::Geometry2D, polarization, ω, estimatedβ, srcxy
     end
 
     ϵᵣ = geom.ϵᵣ[indx, indy];
-    src_range = (0.0, Nsrc*dh);
-    geom1D = Geometry1D(src_range, ϵᵣ);
+    srange = (0.0, Nsrc*dh);
+    geom1D = Geometry1D(srange, ϵᵣ);
     (β, vector) = solve_eigen_1D(geom1D, polarization, ω, estimatedβ, 1);
     geom.src[indx, indy] = 1im*vector;
 end

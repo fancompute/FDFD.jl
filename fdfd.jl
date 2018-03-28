@@ -15,8 +15,8 @@ include("./driven.jl");
 include("./modulation.jl");
 include("./plot.jl");
 
-export assign_src!, assign_src_func!, assign_src_point!, assign_src_mode!, assign_epsr!, assign_epsr_func!
-export coord2ind, poyntingTM, flux_direction
+export setJ!, setM!, setpointJ!, setmodeJ!, setϵᵣ!
+export coord2ind, poynting, flux_direction
 export ϵ₀, μ₀, c₀, η₀
 
 """
@@ -71,11 +71,11 @@ end
 
 
 """
-    assign_src!(geom::Geometry2D, region, value)
+    setJ!(geom::Geometry2D, region, value)
 
 
 """
-function assign_src!(geom::Geometry2D, region, value)
+function setJ!(geom::Geometry2D, region, value)
     mask = [region(x, y) for x in xc(geom), y in yc(geom)];
     if iscallable(value)
         value_assigned = [value(x, y) for x in xc(geom), y in yc(geom)];
@@ -85,24 +85,26 @@ function assign_src!(geom::Geometry2D, region, value)
     geom.src[mask] = value_assigned;
 end
 
-
-"""
-    assign_src_point!(geom::Geometry2D, xy)
+setM!(geom::Geometry2D, region, value) = setJ!(geom::Geometry2D, region, value);
 
 
 """
-function assign_src_point!(geom::Geometry2D, xy)
+    setpointJ!(geom::Geometry2D, xy)
+
+
+"""
+function setpointJ!(geom::Geometry2D, xy)
     (indx, indy) = coord2ind(geom, xy);
     geom.src[indx, indy] = 1im;
 end
 
 
 """
-    assign_src_mode!(geom::Geometry2D, pol, omega, beta_est, src_xy, src_normal, Nsrc)
+    setmodeJ!(geom::Geometry2D, pol, omega, beta_est, src_xy, src_normal, Nsrc)
 
 
 """
-function assign_src_mode!(geom::Geometry2D, polarization, ω, estimatedβ, srcxy, srcnormal, srcpoints)
+function setmodeJ!(geom::Geometry2D, polarization, ω, estimatedβ, srcxy, srcnormal, srcpoints)
     (indx, indy) = coord2ind(geom, srcxy);
 
     M = Int64(round((srcpoints-1)/2));
@@ -128,11 +130,11 @@ end
 
 
 """
-    assign_epsr!(geom::Geometry, region, value)
+    setϵᵣ!(geom::Geometry, region, value)
 
 
 """
-function assign_epsr!(geom::Geometry, region, value)
+function setϵᵣ!(geom::Geometry, region, value)
     if typeof(geom) == Geometry2D
         mask = [region(x, y) for x in xc(geom), y in yc(geom)];
         if iscallable(value)
@@ -155,15 +157,21 @@ end
 
 
 """
-    poyntingTM(Ez, Hx, Hy)
+    poynting(Ez, Hx, Hy)
 
 
 """
-function poyntingTM(Ez, Hx, Hy)
-    Ez_x = grid_average(Ez, "x")
-    Sx = -1/2*real(Ez_x.*conj(Hy));
-    Ez_y = grid_average(Ez, "y");
-    Sy = 1/2*real(Ez_y.*conj(Hx));
+function poynting(polarization, Ez, Hx, Hy)
+    if polarization == "TM"
+        Ez_x = grid_average(Ez, "x");
+        Ez_y = grid_average(Ez, "y");
+        Sx = -1/2*real(Ez_x.*conj(Hy));
+        Sy = 1/2*real(Ez_y.*conj(Hx));
+    elseif polarization == "TE"
+        error("Not implemented yet...");
+    else
+        error("Invalid polarization");
+    end
     return (Sx, Sy)
 end
 
@@ -205,9 +213,9 @@ function dolinearsolve(A, b; matrixtype=Pardiso.COMPLEX_NONSYM, verbose=false)
         pardisoinit(ps);
         x = solve(ps, A, b);
         pardiso_success = true;
-        println("# Solver: pardiso performed %d iterative refinement steps", get_iparm(ps, 7));
+        println("# Solver: PARDISO performed %d iterative refinement steps", get_iparm(ps, 7));
     catch
-        println("# Solver: pardiso failed, falling back to lufact()");
+        println("# Solver: PARDISO failed, falling back to lufact()");
     end
     if ~pardiso_success
         x = lufact(A)\b;

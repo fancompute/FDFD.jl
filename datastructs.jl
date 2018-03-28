@@ -6,17 +6,17 @@ abstract type Geometry end
 mutable struct Geometry1D <: Geometry
 	N::Integer
 	xrange::Tuple{Real,Real}
-	epsr::Array{Complex,1}
+	ϵᵣ::Array{Complex,1}
 
-	function Geometry1D(xrange::Tuple{Real,Real}, epsr::Array{Complex,1})
-		return new(length(epsr), xrange, epsr)
+	function Geometry1D(xrange::Tuple{Real,Real}, ϵᵣ::Array{Complex,1})
+		return new(length(ϵᵣ), xrange, ϵᵣ)
 	end
 	
 	function Geometry1D(dh::Real, xrange::Tuple{Real,Real})
 		Nx = Int64(round((xrange[2]-xrange[1])/dh));
-		epsr = ones(Complex128, Nx);
+		ϵᵣ = ones(Complex128, Nx);
 		println("# Geometry: grid size of ", Nx);
-		return new(Nx, xrange, epsr)
+		return new(Nx, xrange, ϵᵣ)
 	end
 end
 

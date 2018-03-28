@@ -1,22 +1,26 @@
 export Modulator
 export solve_modulation_TM
-export assign_mod_delta!
+export setΔϵᵣ!
 
-using Pardiso, TimerOutputs
+using Pardiso
 
 mutable struct Modulator
     geom::Geometry2D
-    Ω::Real
+    Ω₁::Real
+    Ω₂::Real
     nsidebands::Integer
     Δϵᵣ::Array{Complex,2}
 
     function Modulator(geom::Geometry2D, Ω::Real, nsidebands::Integer)
+        return Modulator(geom, Ω, 0, nsidebands)
+    end
+    function Modulator(geom::Geometry2D, Ω₁::Real, Ω₂::Real, nsidebands::Integer)
         Δϵᵣ = zeros(Complex128, geom.N)
-        return new(geom, Ω, nsidebands, Δϵᵣ)
+        return new(geom, Ω₁, Ω₂, nsidebands, Δϵᵣ)
     end
 end
 
-function assign_mod_delta!(mod::Modulator, region, value)
+function setΔϵᵣ!(mod::Modulator, region, value)
     mask = [region(x, y) for x in xc(mod.geom), y in yc(mod.geom)];
     if iscallable(value)
         value_unmasked = [value(x, y) for x in xc(mod.geom), y in yc(mod.geom)];
@@ -27,24 +31,23 @@ function assign_mod_delta!(mod::Modulator, region, value)
     mod.Δϵᵣ[mask] = value_assigned;
 end
 
-function solve_modulation_TM(mod::Modulator, ω₀; verbose=true)
+function solve_modulation_TM(mod::Modulator, ω₀::Real; verbose=true, sharedpml=true)
     geom = mod.geom;
     nsidebands = mod.nsidebands;
+    nfrequencies = 2*nsidebands+1;
     n = -nsidebands:1:nsidebands; 
     N = geom.N;
     M = prod(N);
-    Ω = mod.Ω;
+    Ω = mod.Ω₁;
     ω = ω₀ + Ω*n; 
 
-    const to = TimerOutput()
-    @timeit to "setup" begin
-    println("# Solver: setup...");
+    println("# Solver: Setup");
 
-    println("# Solver: ", @sprintf("%.2E", (2*nsidebands+1)*M), " unknowns");
+    println("# Solver: Number of unknowns is ", @sprintf("%.2E", nfrequencies*M));
 
-    Ez = zeros(Complex128, 2*nsidebands+1, N[1], N[2]);
-    Hx = zeros(Complex128, 2*nsidebands+1, N[1], N[2]);
-    Hy = zeros(Complex128, 2*nsidebands+1, N[1], N[2]);
+    Ez = zeros(Complex128, nfrequencies, N[1], N[2]);
+    Hx = zeros(Complex128, nfrequencies, N[1], N[2]);
+    Hy = zeros(Complex128, nfrequencies, N[1], N[2]);
 
     Tϵ = spdiagm(ϵ₀*geom.ϵᵣ[:]); #TODO: check reshape vs [:]
     TΔϵ = spdiagm(ϵ₀*mod.Δϵᵣ[:]); #TODO: check reshape vs [:]
@@ -57,58 +60,49 @@ function solve_modulation_TM(mod::Modulator, ω₀; verbose=true)
 
     # Reshape Mz into a vector
     b0 = 1im*ω₀*geom.src[:]; #TODO: check reshape vs [:]
-    b = zeros(Complex128, M*(2*nsidebands+1),1); 
+    b = zeros(Complex128, M*nfrequencies,1); 
     b[(nsidebands*M)+1:(nsidebands+1)*M,1] = b0; 
-    end
 
-    println("# Solver: starting matrix assembly");
-    @timeit to "matrix assembly" begin
-    As  = Array{SparseMatrixCSC}(2*nsidebands+1);
-    Sxf = Array{SparseMatrixCSC}(2*nsidebands+1);
-    Sxb = Array{SparseMatrixCSC}(2*nsidebands+1);
-    Syf = Array{SparseMatrixCSC}(2*nsidebands+1);
-    Syb = Array{SparseMatrixCSC}(2*nsidebands+1);
-
-    println("#         system matrices...");
-    for i = 1:(2*nsidebands + 1)
-        @timeit to "S_i" (Sxf[i], Sxb[i], Syf[i], Syb[i]) = S_create(ω[i], N, geom.Npml, geom.xrange, geom.yrange);
-        @timeit to "A_i" As[i] = Sxb[i]*δxb*μ₀^-1*Sxf[i]*δxf + Syb[i]*δyb*μ₀^-1*Syf[i]*δyf + ω[i]^2*Tϵ;
+    println("# Solver: -> Matrix assembly");
+    println("# Solver: ----> System");
+    As = Array{SparseMatrixCSC}(nfrequencies);
+    Sxf = Array{SparseMatrixCSC}(sharedpml ? 1 : nfrequencies);
+    Sxb = Array{SparseMatrixCSC}(sharedpml ? 1 : nfrequencies);
+    Syf = Array{SparseMatrixCSC}(sharedpml ? 1 : nfrequencies);
+    Syb = Array{SparseMatrixCSC}(sharedpml ? 1 : nfrequencies);
+    if sharedpml
+        (Sxf[1], Sxb[1], Syf[1], Syb[1]) = S_create(ω₀, N, geom.Npml, geom.xrange, geom.yrange);
+        A1 = Sxb[1]*δxb*1/μ₀*Sxf[1]*δxf + Syb[1]*δyb*1/μ₀*Syf[1]*δyf;
+        for i = 1:nfrequencies
+            As[i] = A1 + ω[i]^2*Tϵ;
+        end
+    else
+        for i = 1:nfrequencies
+            (Sxf[i], Sxb[i], Syf[i], Syb[i]) = S_create(ω[i], N, geom.Npml, geom.xrange, geom.yrange);
+            As[i] = Sxb[i]*δxb*1/μ₀*Sxf[i]*δxf + Syb[i]*δyb*1/μ₀*Syf[i]*δyf + ω[i]^2*Tϵ;
+        end
     end
     if nsidebands > 0
-        println("#         coupling matrices...");
-        @timeit to "C_p" begin
-            template_Cp = spdiagm([0.5*ω[1:end-1].^2], [1], 2*nsidebands+1, 2*nsidebands+1);
-            Cp = kron(template_Cp, conj(TΔϵ));
-        end
-        @timeit to "C_m" begin
-            template_Cm = spdiagm([0.5*ω[2:end].^2],  [-1], 2*nsidebands+1, 2*nsidebands+1);
-            Cm = kron(template_Cm, TΔϵ);
-        end
-        println("#         assembling...");
-        @timeit to "A" A = blkdiag(As...) + Cp + Cm;
+        println("# Solver: ----> Coupling");
+        stencil_Cp = spdiagm([0.5*ω[1:end-1].^2], [1], nfrequencies, nfrequencies);
+        Cp = kron(stencil_Cp, conj(TΔϵ));
+        stencil_Cm = spdiagm([0.5*ω[2:end].^2],  [-1], nfrequencies, nfrequencies);
+        Cm = kron(stencil_Cm, TΔϵ);
+
+        println("# Solver: ----> Total");
+        A = blkdiag(As...) + Cp + Cm;
     else
         A = As[1]; 
     end
-    end
 
+    println("# Solver: -> Solving");
+    ez = dolinearsolve(A, b, matrixtype=Pardiso.COMPLEX_NONSYM, verbose=verbose);
 
-    println("# Solver: solving...");
-    @timeit to "solve" begin
-        ez = dolinearsolve(A, b, matrixtype=Pardiso.COMPLEX_NONSYM, verbose=verbose)
-    end
-
-    println("# Solver: post processing...");
-    @timeit to "post processing" begin
-    for i = 1:(2*nsidebands+1)
+    println("# Solver: -> Extracting results");
+    for i = 1:nfrequencies
         Ez[i, :, :] = reshape(ez[(i-1)*M+1:i*M], N);
-        Hx[i, :, :] = reshape(-1/1im/ω[i]*μ₀^-1*Syf[i]*δyf*ez[(i-1)*M+1:i*M], N); 
-        Hy[i, :, :] = reshape(1/1im/ω[i]*μ₀^-1*Sxf[i]*δxf*ez[(i-1)*M+1:i*M], N); 
-    end
-    end
-
-    if verbose
-    	show(to);
-    	println("");
+        Hx[i, :, :] = reshape(-1/1im/ω[i]/μ₀*Syf[sharedpml ? 1 : i]*δyf*ez[(i-1)*M+1:i*M], N); 
+        Hy[i, :, :] = reshape(1/1im/ω[i]/μ₀*Sxf[sharedpml ? 1 : i]*δxf*ez[(i-1)*M+1:i*M], N); 
     end
     
     return (Ez, Hx, Hy, ω)

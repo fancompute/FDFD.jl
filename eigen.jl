@@ -1,17 +1,16 @@
 export solve_eigen_1D
 
 function solve_eigen_1D(geom::Geometry1D, polarization, ω, estimatedβ, neigenvalues)
-    eps_x = grid_average(geom.epsr, "x");
-    T_eps = spdiagm(ϵ₀*geom.epsr[:]);
-    T_eps_x = spdiagm(ϵ₀*eps_x[:]);
+    Tϵ = spdiagm(ϵ₀*geom.ϵᵣ[:]);
+    Tϵxinv = spdiagm(ϵ₀*grid_average(geom.ϵᵣ, "x")[:].^-1);
 
     δxb = δ("x", "b", geom);
     δxf = δ("x", "f", geom);
 
     if polarization == "TM"
-        A = ω^2*μ₀*T_eps + δxf*δxb;
+        A = ω^2*μ₀*Tϵ + δxf*δxb;
     elseif polarization == "TE"
-        A = ω^2*μ₀*T_eps + T_eps*δxf*T_eps_x.^-1*δxb;
+        A = ω^2*μ₀*Tϵ + Tϵ*δxf*Tϵxinv*δxb;
     else
         error("Invalid polarization specified!");
     end

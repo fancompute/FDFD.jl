@@ -1,22 +1,22 @@
 export solve_eigen_1D
 
-function solve_eigen_1D(geom::Geometry1D, pol, omega, beta_est, Neigs)
+function solve_eigen_1D(geom::Geometry1D, polarization, ω, estimatedβ, neigenvalues)
     eps_x = grid_average(geom.epsr, "x");
-    T_eps = spdiagm(epsilon0*geom.epsr[:]);
-    T_eps_x = spdiagm(epsilon0*eps_x[:]);
+    T_eps = spdiagm(ϵ₀*geom.epsr[:]);
+    T_eps_x = spdiagm(ϵ₀*eps_x[:]);
 
-    Dxb = dws("x", "b", geom);
-    Dxf = dws("x", "f", geom);
+    δxb = δ("x", "b", geom);
+    δxf = δ("x", "f", geom);
 
-    if pol == "TM"
-        A = omega^2*mu0*T_eps + Dxf*Dxb;
-    elseif pol == "TE"
-        A = omega^2*mu0*T_eps + T_eps*Dxf*T_eps_x.^-1*Dxb;
+    if polarization == "TM"
+        A = ω^2*μ₀*T_eps + δxf*δxb;
+    elseif polarization == "TE"
+        A = ω^2*μ₀*T_eps + T_eps*δxf*T_eps_x.^-1*δxb;
     else
         error("Invalid polarization specified!");
     end
 
-    (betas2, vectors) = eigs(A, nev=Neigs, sigma=beta_est^2);
-    betas = sqrt.(betas2+0im);
-    return (betas, vectors)
+    (β², vectors) = eigs(A, nev=neigenvalues, sigma=estimatedβ^2);
+    β = sqrt.(β²);
+    return (β, vectors)
 end

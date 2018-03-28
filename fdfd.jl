@@ -1,9 +1,9 @@
 module fdfd
 
-const epsilon0 = 8.85418782e-12;
-const mu0 = 1.25663706e-6;
-const c0 = sqrt(1/epsilon0/mu0);
-const eta0 = sqrt(mu0/epsilon0);
+const ϵ₀ = 8.85418782e-12;
+const μ₀ = 1.25663706e-6;
+const c₀ = sqrt(1/ϵ₀/μ₀);
+const η₀ = sqrt(μ₀/ϵ₀);
 
 include("./helpers.jl");
 include("./datastructs.jl");
@@ -15,15 +15,16 @@ include("./plot.jl");
 
 export assign_src!, assign_src_func!, assign_src_point!, assign_src_mode!, assign_epsr!, assign_epsr_func!
 export coord2ind, poyntingTM, flux_direction
+export ϵ₀, μ₀, c₀, η₀
 
 """
-    dws(w, s, geom::Geometry)
+    δ(w, s, geom::Geometry)
 
 Compute the derivative operators for a given geometry. w should be one of "x" or "y"
 indicating the direction of the derivative. s should be one of "f" or "b" to indicate
 forward or backward derivative, respectively.
 """
-function dws(w, s, geom::Geometry)
+function δ(w, s, geom::Geometry)
     if typeof(geom) == Geometry2D
 	    Nx = geom.N[1];
 	    Ny = geom.N[2];
@@ -36,19 +37,19 @@ function dws(w, s, geom::Geometry)
 
     if w == "x"
         if s == "f"
-            dxf = 1/dx(geom)*spdiagm([ones(Nx-1), -ones(Nx), 1], [1, 0, -Nx+1]);
-            return kron(speye(Ny), dxf)
+            δxf = 1/dx(geom)*spdiagm([ones(Nx-1), -ones(Nx), 1], [1, 0, -Nx+1]);
+            return kron(speye(Ny), δxf)
         else
-            dxb = 1/dx(geom)*spdiagm([-ones(Nx-1), ones(Nx), -1], [-1, 0, Nx-1]);
-            return kron(speye(Ny), dxb)
+            δxb = 1/dx(geom)*spdiagm([-ones(Nx-1), ones(Nx), -1], [-1, 0, Nx-1]);
+            return kron(speye(Ny), δxb)
         end
     else
         if s == "f"
-            dyf = 1/dy(geom)*spdiagm([ones(Ny-1), -ones(Ny), 1], [1, 0, -Ny+1]);
-            return kron(dyf, speye(Nx))
+            δyf = 1/dy(geom)*spdiagm([ones(Ny-1), -ones(Ny), 1], [1, 0, -Ny+1]);
+            return kron(δyf, speye(Nx))
         else
-            dyb = 1/dy(geom)*spdiagm([-ones(Ny-1), ones(Ny), -1], [-1, 0, Ny-1]);
-            return kron(dyb, speye(Nx))
+            δyb = 1/dy(geom)*spdiagm([-ones(Ny-1), ones(Ny), -1], [-1, 0, Ny-1]);
+            return kron(δyb, speye(Nx))
         end
     end
 end
@@ -106,28 +107,28 @@ end
 
 
 """
-function assign_src_mode!(geom::Geometry2D, pol, omega, beta_est, src_xy, src_normal, Nsrc)
-    (src_ind_x, src_ind_y) = coord2ind(geom, src_xy);
+function assign_src_mode!(geom::Geometry2D, polarization, ω, estimatedβ, srcxy, srcnormal, srcpoints)
+    (indx, indy) = coord2ind(geom, srcxy);
 
-    NN = Int64(round((Nsrc-1)/2))
-    Nsrc = 2*NN+1
+    M = Int64(round((srcpoints-1)/2))
+    srcpoints = 2*M+1
     if src_normal == "x"
-        inds_x = src_ind_x;
-        inds_y = src_ind_y+(-NN:NN);
+        indx = indx;
+        indy = indy+(-M:M);
         dh = dy(geom);
     elseif src_normal == "y"
-        inds_x = src_ind_x;
-        inds_y = src_ind_y+(-NN:NN);
+        indx = indx;
+        indy = indy+(-M:M);
         dh = dx(geom);
     else
         error("Invalid src_normal value. Must be x or y")
     end
 
-    epsr_src = geom.epsr[inds_x, inds_y];
+    ϵᵣ = geom.ϵᵣ[indx, indy];
     src_range = (0.0, Nsrc*dh);
-    geom1D = Geometry1D(src_range, epsr_src);
-    (beta, output_vector) = solve_eigen_1D(geom1D, pol, omega, beta_est, 1);
-    geom.src[inds_x, inds_y] = 1im*output_vector;
+    geom1D = Geometry1D(src_range, ϵᵣ);
+    (β, vector) = solve_eigen_1D(geom1D, polarization, ω, estimatedβ, 1);
+    geom.src[indx, indy] = 1im*vector;
 end
 
 
@@ -139,25 +140,22 @@ end
 function assign_epsr!(geom::Geometry, region, value)
     if typeof(geom) == Geometry2D
         mask = [region(x, y) for x in xc(geom), y in yc(geom)];
+        if iscallable(value)
+            value_assigned = [value(x, y) for x in xc(geom), y in yc(geom)];
+        else
+            value_assigned = value;
+        end
     elseif typeof(geom) == Geometry1D
         mask = [region(x) for x in xc(geom)];
+        if iscallable(value)
+            value_assigned = [value(x) for x in xc(geom)];
+        else
+            value_assigned = value;
+        end
     else
         error("Unkown geometry type!")
     end
-
-    geom.epsr[mask] = value;
-end
-
-
-"""
-    assign_epsr_func!(geom::Geometry, region, value_func)
-
-
-"""
-function assign_epsr_func!(geom::Geometry, region, value_func)
-    mask = [region(x, y) for x in xc(geom), y in yc(geom)];
-    value_computed = [value_func(x, y) for x in xc(geom), y in yc(geom)];
-    geom.epsr[mask] = value_computed[mask];
+    geom.ϵᵣ[mask] = value_assigned;
 end
 
 

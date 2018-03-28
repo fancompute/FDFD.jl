@@ -213,9 +213,9 @@ function dolinearsolve(A, b; matrixtype=Pardiso.COMPLEX_NONSYM, verbose=false)
         pardisoinit(ps);
         x = solve(ps, A, b);
         pardiso_success = true;
-        println("# Solver: PARDISO performed %d iterative refinement steps", get_iparm(ps, 7));
+        println("# Solver:   PARDISO performed %d iterative refinement steps", get_iparm(ps, 7));
     catch
-        println("# Solver: PARDISO failed, falling back to lufact()");
+        println("# Solver:   PARDISO failed, falling back to lufact()");
     end
     if ~pardiso_success
         x = lufact(A)\b;

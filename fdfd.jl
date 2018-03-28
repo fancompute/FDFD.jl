@@ -1,5 +1,7 @@
 module fdfd
 
+using Pardiso
+
 const ϵ₀ = 8.85418782e-12;
 const μ₀ = 1.25663706e-6;
 const c₀ = sqrt(1/ϵ₀/μ₀);
@@ -103,13 +105,13 @@ end
 function assign_src_mode!(geom::Geometry2D, polarization, ω, estimatedβ, srcxy, srcnormal, srcpoints)
     (indx, indy) = coord2ind(geom, srcxy);
 
-    M = Int64(round((srcpoints-1)/2))
-    srcpoints = 2*M+1
-    if src_normal == "x"
+    M = Int64(round((srcpoints-1)/2));
+    srcpoints = 2*M+1;
+    if srcnormal == "x"
         indx = indx;
         indy = indy+(-M:M);
         dh = dy(geom);
-    elseif src_normal == "y"
+    elseif srcnormal == "y"
         indx = indx;
         indy = indy+(-M:M);
         dh = dx(geom);
@@ -118,7 +120,7 @@ function assign_src_mode!(geom::Geometry2D, polarization, ω, estimatedβ, srcxy
     end
 
     ϵᵣ = geom.ϵᵣ[indx, indy];
-    srange = (0.0, Nsrc*dh);
+    srange = (0.0, srcpoints*dh);
     geom1D = Geometry1D(srange, ϵᵣ);
     (β, vector) = solve_eigen_1D(geom1D, polarization, ω, estimatedβ, 1);
     geom.src[indx, indy] = 1im*vector;
@@ -188,6 +190,30 @@ function flux_direction(dir_normal, pt1, pt2, geom, Ez, Hx, Hy)
     x_coords = x_coords[ind0:ind1];
     Px = Px.';
     return (x_coords, Px)
+end
+
+function dolinearsolve(A, b; matrixtype=Pardiso.COMPLEX_NONSYM, verbose=false)
+    pardiso_success = false;
+    try
+        ps = PardisoSolver();
+        if verbose
+            set_msglvl!(ps, MESSAGE_LEVEL_ON)
+        end
+        set_matrixtype!(ps, MATRIX_TYPE);
+        set_msglvl!(ps, MESSAGE_LEVEL_ON);
+        set_solver!(ps, DIRECT_SOLVER);
+        pardisoinit(ps);
+        x = solve(ps, A, b);
+        pardiso_success = true;
+        println("# Solver: pardiso performed %d iterative refinement steps", get_iparm(ps, 7));
+    catch
+        println("# Solver: pardiso failed, falling back to lufact()");
+    end
+    if ~pardiso_success
+        x = lufact(A)\b;
+    end
+
+    return x
 end
 
 end

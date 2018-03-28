@@ -1,10 +1,10 @@
-function create_sfactor(wrange, s, omega, Nw, Nw_pml; m=3.5, lnR=-12)
+function create_sfactor(wrange, s, ω, Nw, Nw_pml; m=3.5, lnR=-12)
     dw = (wrange[2]-wrange[1])/Nw; 
     Tw = Nw_pml*dw; 
 
-    sig_max = -(m+1)*lnR/(2*eta0*Tw); 
-    sig_w = l -> sig_max*(l/Tw)^m; 
-    S = l -> 1-1im*sig_w(l)/(omega*epsilon0); 
+    σmax = -(m+1)*lnR/(2*η₀*Tw); 
+    σw = l -> σmax*(l/Tw)^m; 
+    S = l -> 1-1im*σw(l)/(ω*ϵ₀); 
 
     sfactor_array = ones(Complex128, Nw);
 
@@ -27,12 +27,12 @@ function create_sfactor(wrange, s, omega, Nw, Nw_pml; m=3.5, lnR=-12)
     return sfactor_array
 end
 
-function S_create(omega, N, Npml, xrange, yrange)
+function S_create(ω, N, Npml, xrange, yrange)
     # Create the sfactor in each direction and for 'f' and 'b'
-    s_vector_x_f = create_sfactor(xrange, "f", omega, N[1], Npml[1])
-    s_vector_x_b = create_sfactor(xrange, "b", omega, N[1], Npml[1])
-    s_vector_y_f = create_sfactor(yrange, "f", omega, N[2], Npml[2])
-    s_vector_y_b = create_sfactor(yrange, "b", omega, N[2], Npml[2])
+    s_vector_x_f = create_sfactor(xrange, "f", ω, N[1], Npml[1])
+    s_vector_x_b = create_sfactor(xrange, "b", ω, N[1], Npml[1])
+    s_vector_y_f = create_sfactor(yrange, "f", ω, N[2], Npml[2])
+    s_vector_y_b = create_sfactor(yrange, "b", ω, N[2], Npml[2])
 
     # Fill the 2D space with layers of appropriate s-factors
     Sx_f_2D = zeros(Complex128, N);

@@ -1,7 +1,7 @@
 export solve_driven_TM
 
 function solve_driven_TM(geom::Geometry2D, ω)
-    T_eps_z = spdiagm(epsilon0*geom.epsr[:]);
+    Tϵ = spdiagm(ϵ₀*geom.ϵᵣ[:]);
 
     Hx = zeros(Complex128, geom.N);
     Hy = zeros(Complex128, geom.N);
@@ -16,14 +16,10 @@ function solve_driven_TM(geom::Geometry2D, ω)
     δyf = Syf*δ("y", "f", geom);
 
     # Construct system matrix
-    A = δxf*μ₀^-1*δxb + δyf*μ₀^-1*δyb + ω^2*T_eps_z;
+    A = δxf*μ₀^-1*δxb + δyf*μ₀^-1*δyb + ω^2*Tϵ;
     b = 1im*ω*geom.src[:];
 
-    if solver_pardiso
-        ez = solve(handle_ps, A, b);
-    else
-        ez = lufact(A)\b;
-    end
+    ez = dolinearsolve(A, b, matrixtype=Pardiso.COMPLEX_SYM)
 
     hx = -1/1im/ω/μ₀*δyb*ez;
     hy = 1/1im/ω/μ₀*δxb*ez;

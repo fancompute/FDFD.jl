@@ -19,11 +19,12 @@ end
 function assign_mod_delta!(mod::Modulator, region, value)
     mask = [region(x, y) for x in xc(mod.geom), y in yc(mod.geom)];
     if iscallable(value)
-        value_assigned = [value(x, y) for x in xc(mod.geom), y in yc(mod.geom)];
+        value_unmasked = [value(x, y) for x in xc(mod.geom), y in yc(mod.geom)];
+        value_assigned = value_unmasked[mask];
     else
-        value_assigned = value
+        value_assigned = value;
     end
-    mod.Δϵᵣ[mask] = value;
+    mod.Δϵᵣ[mask] = value_assigned;
 end
 
 function solve_modulation_TM(mod::Modulator, ω₀; verbose=true)
@@ -93,28 +94,7 @@ function solve_modulation_TM(mod::Modulator, ω₀; verbose=true)
 
     println("# Solver: solving...");
     @timeit to "solve" begin
-    pardiso_success = false;
-    try
-        ez = zeros(Complex128, M*(2*nsidebands+1),1); 
-        ps = PardisoSolver();
-        if verbose
-        	set_msglvl!(ps, Pardiso.MESSAGE_LEVEL_ON)
-        end
-        set_matrixtype!(ps, Pardiso.COMPLEX_NONSYM);
-        set_msglvl!(ps, Pardiso.MESSAGE_LEVEL_ON);
-        set_solver!(ps, Pardiso.DIRECT_SOLVER);
-        pardisoinit(ps);
-        solve!(ps, ez, A, b);
-        pardiso_success = true;
-        println("# Solver: pardiso performed %d iterative refinement steps", get_iparm(ps, 7));
-        #println("# Solver: maximum residual for the solution X is %0.3g", maximum(abs(A*ez-b)));
-    catch
-        println("# Solver: pardiso failed, falling back to lufact()");
-    end
-
-    if ~pardiso_success
-        ez = lufact(A)\b;
-    end
+        ez = dolinearsolve(A, b, matrixtype=Pardiso.COMPLEX_NONSYM, verbose=verbose)
     end
 
     println("# Solver: post processing...");

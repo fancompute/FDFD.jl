@@ -25,13 +25,13 @@ mutable struct Geometry2D <: Geometry
 	Npml::Tuple{Integer,Integer}
 	xrange::Tuple{Real,Real}
 	yrange::Tuple{Real,Real}
-	epsr::Array{Complex,2}
+	ϵᵣ::Array{Complex,2}
 	src::Array{Complex,2}
 
 	function Geometry2D(N::Tuple{Integer,Integer}, Npml::Tuple{Integer,Integer}, xrange::Tuple{Real,Real}, yrange::Tuple{Real,Real})
-		epsr = ones(Complex128, N);
+		ϵᵣ = ones(Complex128, N);
 		src = zeros(Complex128, N);
-		return new(N, Npml, xrange, yrange, epsr, src)
+		return new(N, Npml, xrange, yrange, ϵᵣ, src)
 	end
 
 	function Geometry2D(N::Tuple{Integer,Integer}, xrange::Tuple{Real,Real}, yrange::Tuple{Real,Real})

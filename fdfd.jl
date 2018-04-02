@@ -190,7 +190,7 @@ function flux_direction(dir_normal, pt1, pt2, geom, Ez, Hx, Hy)
     Px = zeros(Real,N_freqs,N_cells);
 
     for i = 1:N_freqs
-        (Sx, _) = poyntingTM(Ez[i,:,:], Hx[i,:,:], Hy[i,:,:]);
+        (Sx, _) = poynting("TM", Ez[i,:,:], Hx[i,:,:], Hy[i,:,:]);
         Px[i, :] = sum(Sx[ind0:ind1,:],2)*dh;
     end
 

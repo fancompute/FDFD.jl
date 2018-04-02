@@ -1,4 +1,4 @@
-export plot_fields_abs, plot_src, plot_ϵᵣ, plot_Δϵᵣ
+export plot_fields_abs, plot_src, plot_ϵᵣ, plot_Δϵᵣ, plot_Δϵᵣ_angle
 using PyPlot
 
 #,vmin=-maximum(abs.(Z)),vmax=maximum(abs.(Z))
@@ -42,6 +42,11 @@ end
 function plot_Δϵᵣ(mod::Modulator)
 	geom = mod.geom;
 	plt_do_color(xc(geom), yc(geom), abs.(mod.Δϵᵣ));
+end
+
+function plot_Δϵᵣ_angle(mod::Modulator)
+	geom = mod.geom;
+	plt_do_color(xc(geom), yc(geom), angle.(mod.Δϵᵣ)/pi);
 end
 
 function plt_do_color(x, y, quantity)

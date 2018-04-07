@@ -201,6 +201,7 @@ function flux_direction(dir_normal, pt1, pt2, geom, Ez, Hx, Hy)
 end
 
 function dolinearsolve(A, b; matrixtype=Pardiso.COMPLEX_NONSYM, verbose=false)
+    tic();
     pardiso_success = false;
     try
         ps = PardisoSolver();
@@ -220,7 +221,7 @@ function dolinearsolve(A, b; matrixtype=Pardiso.COMPLEX_NONSYM, verbose=false)
     if ~pardiso_success
         x = lufact(A)\b;
     end
-
+    println(@sprintf("# Solver:   completed in %.2f min", toq()/60));
     return x
 end
 

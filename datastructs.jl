@@ -71,6 +71,11 @@ function yc(geom::Geometry2D)
 	return geom.yrange[1]+dy(geom)*(0.5:1:geom.N[2])
 end
 
+xc(geom::Geometry, i::CartesianIndex{2}) = xc(geom)[i.I[1]];
+yc(geom::Geometry, i::CartesianIndex{2}) = yc(geom)[i.I[2]];
+xc(geom::Geometry, i::Int64) = xc(geom)[ind2sub(geom.N, i)[1]];
+yc(geom::Geometry, i::Int64) = yc(geom)[ind2sub(geom.N, i)[2]];
+
 function xe(geom::Geometry)
 	return geom.xrange[1]+dx(geom)*(0:1:geom.N[1])
 end
@@ -78,6 +83,11 @@ end
 function ye(geom::Geometry2D)
 	return geom.yrange[1]+dy(geom)*(0:1:geom.N[2])
 end
+
+xe(geom::Geometry, i::CartesianIndex{2}) = xe(geom)[i.I[1]];
+ye(geom::Geometry, i::CartesianIndex{2}) = ye(geom)[i.I[2]];
+xe(geom::Geometry, i::Int64) = xe(geom)[ind2sub(geom.N, i)[1]];
+ye(geom::Geometry, i::Int64) = ye(geom)[ind2sub(geom.N, i)[2]];
 
 function coord2ind(geom::Geometry, xy)
     indx = Int64(round((xy[1]-geom.xrange[1])/(geom.xrange[2]-geom.xrange[1])*geom.N[1])+1);

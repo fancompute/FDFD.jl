@@ -1,5 +1,6 @@
 module fdfd
 
+using GeometryPrimitives, StaticArrays
 using Pardiso
 
 const ϵ₀ = 8.85418782e-12;
@@ -15,7 +16,7 @@ include("./driven.jl");
 include("./modulation.jl");
 include("./plot.jl");
 
-export setJ!, setM!, setpointJ!, setmodeJ!, setϵᵣ!
+export setJ!, setM!, setpointJ!, setmodeJ!, setϵᵣ!, composeϵᵣ!
 export coord2ind, poynting, flux_direction
 export ϵ₀, μ₀, c₀, η₀
 
@@ -126,6 +127,35 @@ function setmodeJ!(geom::Geometry2D, polarization, ω, estimatedβ, srcxy, srcno
     geom1D = Geometry1D(srange, ϵᵣ);
     (β, vector) = solve_eigen_1D(geom1D, polarization, ω, estimatedβ, 1);
     geom.src[indx, indy] = 1im*vector;
+end
+
+"""
+    composeϵᵣ!(geom::Geometry, shapes)
+
+
+"""
+function composeϵᵣ!(geom::Geometry, shapes)
+    fill!(geom.ϵᵣ, 1);
+    kd = KDTree(shapes);
+    for i in eachindex(geom.ϵᵣ)
+        x = xc(geom, i);
+        y = yc(geom, i);
+        x1 = xe(geom, i);
+        y1 = ye(geom, i);
+        x2 = xe(geom, i+1);
+        y2 = ye(geom, i+1);
+        shape = findin([x,y], kd);
+        if ~isnull(shape)
+            r₀, nout = surfpt_nearby( [x,y], get(shape));
+            frac = volfrac((SVector(x1, y1), SVector(x2, y2)), nout, r₀);
+            data = get(shape).data;
+            if iscallable(data)
+                geom.ϵᵣ[i] = data(x, y);
+            else
+                geom.ϵᵣ[i] = data;
+            end
+        end
+    end
 end
 
 

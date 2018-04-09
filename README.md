@@ -1,4 +1,7 @@
 # FDFD.jl
+
+!(img/coupler_fields.png)
+
 FDFD.jl is a 2D finite difference frequency domain (FDFD) code written in Julia for solving Maxwell's equations. 
 
 ## Usage

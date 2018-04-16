@@ -236,15 +236,14 @@ function dolinearsolve(A, b; matrixtype=Pardiso.COMPLEX_NONSYM, verbose=false)
     try
         ps = PardisoSolver();
         if verbose
-            set_msglvl!(ps, MESSAGE_LEVEL_ON)
+            set_msglvl!(ps, Pardiso.MESSAGE_LEVEL_ON)
         end
-        set_matrixtype!(ps, MATRIX_TYPE);
-        set_msglvl!(ps, MESSAGE_LEVEL_ON);
-        set_solver!(ps, DIRECT_SOLVER);
+        set_matrixtype!(ps, Pardiso.MATRIX_TYPE);
+        set_msglvl!(ps, Pardiso.MESSAGE_LEVEL_ON);
+        set_solver!(ps, Pardiso.DIRECT_SOLVER);
         pardisoinit(ps);
         x = solve(ps, A, b);
         pardiso_success = true;
-        println("# Solver:   PARDISO performed %d iterative refinement steps", get_iparm(ps, 7));
     catch
         println("# Solver:   PARDISO failed, falling back to lufact()");
     end

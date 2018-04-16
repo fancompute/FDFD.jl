@@ -31,7 +31,7 @@ function setΔϵᵣ!(mod::Modulator, region, value)
     mod.Δϵᵣ[mask] = value_assigned;
 end
 
-function solve_modulation_TM(mod::Modulator, ω₀::Real; verbose=true, sharedpml=true)
+function solve_modulation_TM(mod::Modulator, ω₀::Real; verbose=false, sharedpml=true)
     geom = mod.geom;
     nsidebands = mod.nsidebands;
     nfrequencies = 2*nsidebands+1;

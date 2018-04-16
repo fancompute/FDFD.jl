@@ -238,7 +238,7 @@ function dolinearsolve(A, b; matrixtype=Pardiso.COMPLEX_NONSYM, verbose=false)
         if verbose
             set_msglvl!(ps, Pardiso.MESSAGE_LEVEL_ON)
         end
-        set_matrixtype!(ps, Pardiso.MATRIX_TYPE);
+        set_matrixtype!(ps, matrixtype);
         set_msglvl!(ps, Pardiso.MESSAGE_LEVEL_ON);
         set_solver!(ps, Pardiso.DIRECT_SOLVER);
         pardisoinit(ps);

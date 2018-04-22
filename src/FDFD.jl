@@ -1,4 +1,4 @@
-module fdfd
+module FDFD
 
 using GeometryPrimitives, StaticArrays
 using Pardiso

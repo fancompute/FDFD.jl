@@ -1,7 +1,17 @@
-export solve_driven_TM
+export Nonlinearity
 
-function solve_driven_TM(geom::Geometry2D, ω)
+mutable struct Nonlinearity
+    χ3::Array{Real,2}
+
+    function Nonlinearity(geom::Geometry2D)
+        χ3 = zeros(Complex128, geom.N)
+        return new(χ3)
+    end
+end
+
+function solve_n2_TM(geom::Geometry2D, ω)
     Tϵ = spdiagm(ϵ₀*geom.ϵᵣ[:]);
+    Tχ = spdiagm(ϵ₀*nonlinearity.χ[:]);
 
     Hx = zeros(Complex128, geom.N);
     Hy = zeros(Complex128, geom.N);
@@ -16,10 +26,14 @@ function solve_driven_TM(geom::Geometry2D, ω)
     δyf = Syf*δ("y", "f", geom);
 
     # Construct system matrix
-    A = δxf*μ₀^-1*δxb + δyf*μ₀^-1*δyb + ω^2*Tϵ;
-    b = 1im*ω*geom.src[:];
+    A  = δxf*μ₀^-1*δxb + δyf*μ₀^-1*δyb + ω^2*Tϵ;
 
+    b = 1im*ω*geom.src[:];
     ez = dolinearsolve(A, b, matrixtype=Pardiso.COMPLEX_SYM)
+    for i = 1:Niterations
+        P_NL = 3*ϵ₀*Tχ*ez*conj.(ez);
+        F = A*ez - b + P_NL;
+    end
 
     hx = -1/1im/ω/μ₀*δyb*ez;
     hy = 1/1im/ω/μ₀*δxb*ez;

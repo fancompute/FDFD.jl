@@ -1,6 +1,8 @@
-function create_sfactor(wrange, s, ω, Nw, Nw_pml; m=3.5, lnR=-12)
-    dw = (wrange[2]-wrange[1])/Nw; 
-    Tw = Nw_pml*dw; 
+function create_sfactor(w::Direction, s::DerivativeDirection, g::Grid, ω::Float ; m=3.5, lnR=-12)
+    dw = dh(g, w);
+    Tw = g.Npml[Int(w)]*dw;
+    Nw = size(g, Int(w));
+    Nw_pml = g.Npml[Int(w)];
 
     σmax = -(m+1)*lnR/(2*η₀*Tw); 
     σw = l -> σmax*(l/Tw)^m; 
@@ -9,13 +11,13 @@ function create_sfactor(wrange, s, ω, Nw, Nw_pml; m=3.5, lnR=-12)
     sfactor_array = ones(Complex128, Nw);
 
     for i in 1:Nw
-        if s == "f"
+        if s == Forward
             if i <= Nw_pml
                 sfactor_array[i] = S(dw*(Nw_pml-i+0.5));
             elseif i > Nw - Nw_pml
                 sfactor_array[i] = S(dw*(i-(Nw-Nw_pml)-0.5));
             end
-        elseif s == "b"
+        elseif s == Backward
             if i <= Nw_pml
                 sfactor_array[i] = S(dw*(Nw_pml-i+1));
             elseif i > Nw - Nw_pml
@@ -27,25 +29,25 @@ function create_sfactor(wrange, s, ω, Nw, Nw_pml; m=3.5, lnR=-12)
     return sfactor_array
 end
 
-function S_create(ω, N, Npml, xrange, yrange)
-    # Create the sfactor in each direction and for 'f' and 'b'
-    s_vector_x_f = create_sfactor(xrange, "f", ω, N[1], Npml[1])
-    s_vector_x_b = create_sfactor(xrange, "b", ω, N[1], Npml[1])
-    s_vector_y_f = create_sfactor(yrange, "f", ω, N[2], Npml[2])
-    s_vector_y_b = create_sfactor(yrange, "b", ω, N[2], Npml[2])
+function S_create(g::Grid, ω::Float)
+    # Create the sfactor in each direction and for forward and backward
+    s_vector_x_f = create_sfactor(DirectionX, Forward,  g, ω);
+    s_vector_x_b = create_sfactor(DirectionX, Backward, g, ω);
+    s_vector_y_f = create_sfactor(DirectionY, Forward,  g, ω);
+    s_vector_y_b = create_sfactor(DirectionY, Backward, g, ω);
 
     # Fill the 2D space with layers of appropriate s-factors
-    Sx_f_2D = zeros(Complex128, N);
-    Sx_b_2D = zeros(Complex128, N);
-    Sy_f_2D = zeros(Complex128, N);
-    Sy_b_2D = zeros(Complex128, N);
+    Sx_f_2D = zeros(Complex128, size(g));
+    Sx_b_2D = zeros(Complex128, size(g));
+    Sy_f_2D = zeros(Complex128, size(g));
+    Sy_b_2D = zeros(Complex128, size(g));
 
-    for i = 1:N[1]
+    for i = 1:size(g, 1)
         Sy_f_2D[i, :] = s_vector_y_f.^-1; 
         Sy_b_2D[i, :] = s_vector_y_b.^-1; 
     end
 
-    for i = 1:N[2]
+    for i = 1:size(g, 2)
         Sx_f_2D[:, i] = s_vector_x_f.^-1;  
         Sx_b_2D[:, i] = s_vector_x_b.^-1; 
     end

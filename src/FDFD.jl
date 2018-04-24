@@ -8,50 +8,49 @@ const μ₀ = 1.25663706e-6;
 const c₀ = sqrt(1/ϵ₀/μ₀);
 const η₀ = sqrt(μ₀/ϵ₀);
 
-include("./helpers.jl");
-include("./datastructs.jl");
+include("./types.jl");
+include("./grid.jl");
+include("./device.jl");
 include("./pml.jl");
-include("./eigen.jl");
-include("./driven.jl");
-include("./modulation.jl");
-include("./plot.jl");
+include("./solver/driven.jl");
+include("./solver/eigen.jl");
+include("./solver/modulation.jl");
+#include("./solver/chi3.jl");
+#include("./plot.jl");
 
-export setJ!, setM!, setpointJ!, setmodeJ!, setϵᵣ!, composeϵᵣ!
-export coord2ind, poynting, flux_direction
 export ϵ₀, μ₀, c₀, η₀
+export poynting, flux_direction, unwrap
 
 """
-    δ(w, s, geom::Geometry)
+    δ(w::Direction, s::DerivativeDirection, g::Grid)
 
 Compute the derivative operators for a given geometry. w should be one of "x" or "y"
 indicating the direction of the derivative. s should be one of "f" or "b" to indicate
 forward or backward derivative, respectively.
 """
-function δ(w, s, geom::Geometry)
-    if typeof(geom) == Geometry2D
-	    Nx = geom.N[1];
-	    Ny = geom.N[2];
-    elseif typeof(geom) == Geometry1D
-        Nx = geom.N;
+function δ(w::Direction, s::DerivativeDirection, g::Grid{K}) where {K}
+    if K == 2
+	    (Nx, Ny) = size(g);
+    else 
+        Nx = size(g, 1);
         Ny = 1;
-    else
-        error("Unkown geometry type!")
     end
 
-    if w == "x"
-        if s == "f"
-            δxf = 1/dx(geom)*spdiagm([ones(Nx-1), -ones(Nx), 1], [1, 0, -Nx+1]);
+    if w == DirectionX
+        if s == Forward
+            δxf = 1/dx(g)*spdiagm([ones(Nx-1), -ones(Nx), 1], [1, 0, -Nx+1]);
             return kron(speye(Ny), δxf)
         else
-            δxb = 1/dx(geom)*spdiagm([-ones(Nx-1), ones(Nx), -1], [-1, 0, Nx-1]);
+            δxb = 1/dx(g)*spdiagm([-ones(Nx-1), ones(Nx), -1], [-1, 0, Nx-1]);
             return kron(speye(Ny), δxb)
         end
-    else
-        if s == "f"
-            δyf = 1/dy(geom)*spdiagm([ones(Ny-1), -ones(Ny), 1], [1, 0, -Ny+1]);
+    end
+    if w == DirectionY
+        if s == Backward
+            δyf = 1/dy(g)*spdiagm([ones(Ny-1), -ones(Ny), 1], [1, 0, -Ny+1]);
             return kron(δyf, speye(Nx))
         else
-            δyb = 1/dy(geom)*spdiagm([-ones(Ny-1), ones(Ny), -1], [-1, 0, Ny-1]);
+            δyb = 1/dy(g)*spdiagm([-ones(Ny-1), ones(Ny), -1], [-1, 0, Ny-1]);
             return kron(δyb, speye(Nx))
         end
     end
@@ -63,126 +62,11 @@ end
 
 
 """
-function grid_average(centerarray, w)
+function grid_average(centerarray::AbstractArray, w::Direction)
     ndims(centerarray) == 1 && return (centerarray+circshift(centerarray, (1)))/2
-    w == "x" && return (centerarray+circshift(centerarray, (1, 0)))/2;
-    w == "y" && return (centerarray+circshift(centerarray, (0, 1)))/2;
+    w == DirectionX && return (centerarray+circshift(centerarray, (1, 0)))/2;
+    w == DirectionY && return (centerarray+circshift(centerarray, (0, 1)))/2;
     return centerarray
-end
-
-
-"""
-    setJ!(geom::Geometry2D, region, value)
-
-
-"""
-function setJ!(geom::Geometry2D, region, value)
-    mask = [region(x, y) for x in xc(geom), y in yc(geom)];
-    if iscallable(value)
-        value_assigned = [value(x, y) for x in xc(geom), y in yc(geom)];
-    else
-        value_assigned = value;
-    end
-    geom.src[mask] = value_assigned;
-end
-
-setM!(geom::Geometry2D, region, value) = setJ!(geom::Geometry2D, region, value);
-
-
-"""
-    setpointJ!(geom::Geometry2D, xy)
-
-
-"""
-function setpointJ!(geom::Geometry2D, xy)
-    (indx, indy) = coord2ind(geom, xy);
-    geom.src[indx, indy] = 1im;
-end
-
-
-"""
-    setmodeJ!(geom::Geometry2D, pol, omega, beta_est, src_xy, src_normal, Nsrc)
-
-
-"""
-function setmodeJ!(geom::Geometry2D, polarization, ω, estimatedβ, srcxy, srcnormal, srcpoints)
-    (indx, indy) = coord2ind(geom, srcxy);
-
-    M = Int64(round((srcpoints-1)/2));
-    srcpoints = 2*M+1;
-    if srcnormal == "x"
-        indx = indx;
-        indy = indy+(-M:M);
-        dh = dy(geom);
-    elseif srcnormal == "y"
-        indx = indx;
-        indy = indy+(-M:M);
-        dh = dx(geom);
-    else
-        error("Invalid src_normal value. Must be x or y")
-    end
-
-    ϵᵣ = geom.ϵᵣ[indx, indy];
-    srange = (0.0, srcpoints*dh);
-    geom1D = Geometry1D(srange, ϵᵣ);
-    (β, vector) = solve_eigen_1D(geom1D, polarization, ω, estimatedβ, 1);
-    geom.src[indx, indy] = 1im*vector;
-end
-
-"""
-    composeϵᵣ!(geom::Geometry, shapes)
-
-
-"""
-function composeϵᵣ!(geom::Geometry, shapes)
-    fill!(geom.ϵᵣ, 1);
-    kd = KDTree(shapes);
-    for i in eachindex(geom.ϵᵣ)
-        x = xc(geom, i);
-        y = yc(geom, i);
-        x1 = xe(geom, i);
-        y1 = ye(geom, i);
-        x2 = xe(geom, i+1);
-        y2 = ye(geom, i+1);
-        shape = findin([x,y], kd);
-        if ~isnull(shape)
-            r₀, nout = surfpt_nearby( [x,y], get(shape));
-            frac = volfrac((SVector(x1, y1), SVector(x2, y2)), nout, r₀);
-            data = get(shape).data;
-            if iscallable(data)
-                geom.ϵᵣ[i] = data(x, y);
-            else
-                geom.ϵᵣ[i] = data;
-            end
-        end
-    end
-end
-
-
-"""
-    setϵᵣ!(geom::Geometry, region, value)
-
-
-"""
-function setϵᵣ!(geom::Geometry, region, value)
-    if typeof(geom) == Geometry2D
-        mask = [region(x, y) for x in xc(geom), y in yc(geom)];
-        if iscallable(value)
-            value_assigned = [value(x, y) for x in xc(geom), y in yc(geom)];
-        else
-            value_assigned = value;
-        end
-    elseif typeof(geom) == Geometry1D
-        mask = [region(x) for x in xc(geom)];
-        if iscallable(value)
-            value_assigned = [value(x) for x in xc(geom)];
-        else
-            value_assigned = value;
-        end
-    else
-        error("Unkown geometry type!")
-    end
-    geom.ϵᵣ[mask] = value_assigned;
 end
 
 
@@ -191,13 +75,13 @@ end
 
 
 """
-function poynting(polarization, Ez, Hx, Hy)
-    if polarization == "TM"
-        Ez_x = grid_average(Ez, "x");
-        Ez_y = grid_average(Ez, "y");
+function poynting(polarization::Polarization, Ez, Hx, Hy)
+    if polarization == TM
+        Ez_x = grid_average(Ez, DirectionX);
+        Ez_y = grid_average(Ez, DirectionY);
         Sx = -1/2*real(Ez_x.*conj(Hy));
         Sy = 1/2*real(Ez_y.*conj(Hx));
-    elseif polarization == "TE"
+    elseif polarization == TE
         error("Not implemented yet...");
     else
         error("Invalid polarization");
@@ -205,12 +89,12 @@ function poynting(polarization, Ez, Hx, Hy)
     return (Sx, Sy)
 end
 
-function flux_direction(dir_normal, pt1, pt2, geom, Ez, Hx, Hy)
-    if dir_normal == "x"
+function flux_direction(dir_normal::Direction, pt1, pt2, geom, Ez, Hx, Hy)
+    if dir_normal == DirectionX
         (ind0, _) = coord2ind(geom, (pt1, geom.yrange[1]));
         (ind1, _) = coord2ind(geom, (pt2, geom.yrange[1]));
         dh = dy(geom);
-    elseif dir_normal == "y"
+    elseif dir_normal == DirectionY
         error("Not implemented yet...")
     end
     ind_cells = ind0:ind1;
@@ -220,7 +104,7 @@ function flux_direction(dir_normal, pt1, pt2, geom, Ez, Hx, Hy)
     Px = zeros(Real,N_freqs,N_cells);
 
     for i = 1:N_freqs
-        (Sx, _) = poynting("TM", Ez[i,:,:], Hx[i,:,:], Hy[i,:,:]);
+        (Sx, _) = poynting(TM, Ez[i,:,:], Hx[i,:,:], Hy[i,:,:]);
         Px[i, :] = sum(Sx[ind0:ind1,:],2)*dh;
     end
 
@@ -251,6 +135,22 @@ function dolinearsolve(A, b; matrixtype=Pardiso.COMPLEX_NONSYM, verbose=false)
     end
     println(@sprintf("# Solver:   completed in %.2f min", toq()/60));
     return x
+end
+
+iscallable(f) = !isempty(methods(f));
+
+function unwrap(v, inplace=false)
+  # currently assuming an array
+  unwrapped = inplace ? v : copy(v)
+  for i in 2:length(v)
+    while unwrapped[i] - unwrapped[i-1] >= pi
+      unwrapped[i] -= 2pi
+    end
+    while unwrapped[i] - unwrapped[i-1] <= -pi
+      unwrapped[i] += 2pi
+    end
+  end
+  return unwrapped
 end
 
 end

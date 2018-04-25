@@ -1,4 +1,6 @@
 julia 0.6
+StaticArrays
 GeometryPrimitives
 Pardiso
 PyPlot
+Memento

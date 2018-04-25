@@ -69,14 +69,14 @@ end
 setup_ϵᵣ!(d::AbstractDevice, shapes::AbstractVector{<:Shape}) = _compose_shapes!(d.ϵᵣ, d.grid, shapes)
 setup_ϵᵣ!(d::AbstractDevice, region, value) = _mask_values!(d.ϵᵣ, d.grid, region, value)
 
-setup_src!(d::Device, region, value) = _mask_values!(d.src, d.grid, region, value)
+setup_src!(d::AbstractDevice, region, value) = _mask_values!(d.src, d.grid, region, value)
 
-function setup_src!(d::Device, xy::AbstractArray) 
+function setup_src!(d::AbstractDevice, xy::AbstractArray) 
     (indx, indy) = coord2ind(d.grid, xy);
     d.src[indx, indy] = 1im;
 end
 
-function setup_src!(d::Device, pol::Polarization, estimatedβ::Complex, srcxy::AbstractArray, srcnormal::Direction, srcpoints::Int)
+function setup_src!(d::AbstractDevice, pol::Polarization, estimatedβ::Complex, srcxy::AbstractArray, srcnormal::Direction, srcpoints::Int)
     (indx, indy) = coord2ind(d.grid, srcxy);
     M = Int64(round((srcpoints-1)/2));
     srcpoints = 2*M+1;
@@ -95,5 +95,5 @@ function setup_src!(d::Device, pol::Polarization, estimatedβ::Complex, srcxy::A
     dev1D = Device(g1D, d.ω);
     dev1D.ϵᵣ = d.ϵᵣ[indx, indy];
     (β, vector) = solve(dev1D, pol, estimatedβ, 1);
-    d.src[indx, indy] = 1im*vector;
+    d.src[indx, indy] = abs.(vector);
 end

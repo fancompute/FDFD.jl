@@ -1,7 +1,9 @@
 module FDFD
 
-using GeometryPrimitives, StaticArrays
-using Pardiso
+using GeometryPrimitives, StaticArrays, Pardiso, Memento
+
+const logger = getlogger(current_module());
+__init__() = Memento.register(logger);
 
 const ϵ₀ = 8.85418782e-12;
 const μ₀ = 1.25663706e-6;
@@ -15,7 +17,7 @@ include("./pml.jl");
 include("./solver/driven.jl");
 include("./solver/eigen.jl");
 include("./solver/modulation.jl");
-#include("./solver/chi3.jl");
+include("./solver/nonlinear.jl");
 #include("./plot.jl");
 
 export ϵ₀, μ₀, c₀, η₀
@@ -114,26 +116,24 @@ function flux_direction(dir_normal::Direction, pt1, pt2, geom, Ez, Hx, Hy)
     return (x_coords, Px)
 end
 
-function dolinearsolve(A, b; matrixtype=Pardiso.COMPLEX_NONSYM, verbose=false)
+function dolinearsolve(A, b; matrixtype=Pardiso.COMPLEX_NONSYM)
+    global warned_pardiso
     tic();
     pardiso_success = false;
     try
         ps = PardisoSolver();
-        if verbose
-            set_msglvl!(ps, Pardiso.MESSAGE_LEVEL_ON)
-        end
         set_matrixtype!(ps, matrixtype);
         set_solver!(ps, Pardiso.DIRECT_SOLVER);
         pardisoinit(ps);
         x = solve(ps, A, b);
         pardiso_success = true;
     catch
-        println("# Solver:   PARDISO failed, falling back to lufact()");
+        #warn(logger, "Pardiso solver has failed, falling back to lufact()");
     end
     if ~pardiso_success
         x = lufact(A)\b;
     end
-    println(@sprintf("# Solver:   completed in %.2f min", toq()/60));
+    info(logger, @sprintf("Solve completed in %.2f min", toq()/60));
     return x
 end
 

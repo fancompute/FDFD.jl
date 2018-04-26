@@ -1,6 +1,7 @@
 export solve
 
 function solve(d::Device)
+    (ϵ₀, μ₀, c₀) = normalize_parameters(d);
     ω = d.ω[1];
 
     Tϵ = spdiagm(ϵ₀*d.ϵᵣ[:]);

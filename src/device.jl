@@ -7,8 +7,8 @@ Base.size(d::AbstractDevice) = size(d.grid);
 Base.size(d::AbstractDevice, i::Int) = size(d.grid, i);
 Base.length(d::AbstractDevice) = length(d.grid);
 
-mutable struct Device <: AbstractDevice
-	grid::Grid
+mutable struct Device{D} <: AbstractDevice
+	grid::Grid{D}
 	ϵᵣ::Array{Complex}
     src::Array{Complex}
     ω::AbstractVector{Float}
@@ -21,6 +21,9 @@ function Device(grid::Grid, ω::AbstractVector{Float})
 end
 
 Device(grid::Grid, ω::Float) = Device(grid, [ω]);
+
+normalize_parameters(g::Grid) = (ϵ₀*g.L₀, μ₀*g.L₀, c₀/g.L₀);
+normalize_parameters(d::AbstractDevice) = normalize_parameters(d.grid);
 
 function _compose_shapes!(pixels::AbstractArray, grid::Grid, shapes::AbstractVector{<:Shape})
     kd = KDTree(shapes);
@@ -50,20 +53,21 @@ function _mask_values!(pixels::AbstractArray, grid::Grid, region, value)
         mask = [region(x, y) for x in xc(grid), y in yc(grid)];
         if iscallable(value)
             value_assigned = [value(x, y) for x in xc(grid), y in yc(grid)];
+            pixels[mask]   = value_assigned[mask];
         else
-            value_assigned = value;
+            pixels[mask]   = value;
         end
     elseif ndims(grid) == 1
         mask = [region(x) for x in xc(grid)];
         if iscallable(value)
             value_assigned = [value(x) for x in xc(grid)];
+            pixels[mask]   = value_assigned[mask];
         else
-            value_assigned = value;
+            pixels[mask]   = value;
         end
     else
         error("Unkown device dimension!")
-    end
-    pixels[mask] = value_assigned;
+    end;
 end
 
 setup_ϵᵣ!(d::AbstractDevice, shapes::AbstractVector{<:Shape}) = _compose_shapes!(d.ϵᵣ, d.grid, shapes)
@@ -76,7 +80,7 @@ function setup_src!(d::AbstractDevice, xy::AbstractArray)
     d.src[indx, indy] = 1im;
 end
 
-function setup_src!(d::AbstractDevice, pol::Polarization, estimatedβ::Complex, srcxy::AbstractArray, srcnormal::Direction, srcpoints::Int)
+function setup_src!(d::AbstractDevice, pol::Polarization, neff::Number, srcxy::AbstractArray, srcnormal::Direction, srcpoints::Int)
     (indx, indy) = coord2ind(d.grid, srcxy);
     M = Int64(round((srcpoints-1)/2));
     srcpoints = 2*M+1;
@@ -91,9 +95,9 @@ function setup_src!(d::AbstractDevice, pol::Polarization, estimatedβ::Complex, 
         dh = dx(d.grid);
     end
 
-    g1D   = Grid(srcpoints, [0, srcpoints*dh]);
+    g1D   = Grid(srcpoints, [0 srcpoints*dh], L₀=d.grid.L₀);
     dev1D = Device(g1D, d.ω);
     dev1D.ϵᵣ = d.ϵᵣ[indx, indy];
-    (β, vector) = solve(dev1D, pol, estimatedβ, 1);
+    (β, vector) = solve(dev1D, pol, neff, 1);
     d.src[indx, indy] = abs.(vector);
 end

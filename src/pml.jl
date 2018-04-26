@@ -1,4 +1,5 @@
 function create_sfactor(w::Direction, s::DerivativeDirection, g::Grid, ω::Float ; m=3.5, lnR=-12)
+    (ϵ₀, μ₀, c₀) = normalize_parameters(g);
     dw = dh(g, w);
     Tw = g.Npml[Int(w)]*dw;
     Nw = size(g, Int(w));

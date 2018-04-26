@@ -1,17 +1,25 @@
 module FDFD
-
 using GeometryPrimitives, StaticArrays, Pardiso, Memento
 
 const logger = getlogger(current_module());
-__init__() = Memento.register(logger);
 
-const ϵ₀ = 8.85418782e-12;
-const μ₀ = 1.25663706e-6;
-const c₀ = sqrt(1/ϵ₀/μ₀);
-const η₀ = sqrt(μ₀/ϵ₀);
+#function __init__()
+#    Memento.register(logger);
+#    #setloglevel!("info");
+#end
+
+function setloglevel!(level::String)
+    logger = FDFD.logger;
+    Memento.setlevel!(logger, level);
+    #while logger.name != "root"
+    #    logger = Memento.getparent(logger.name)
+    #    Memento.setlevel!(logger, level)
+    #end
+end
 
 include("./types.jl");
 include("./grid.jl");
+#include("./data.jl");
 include("./device.jl");
 include("./pml.jl");
 include("./solver/driven.jl");
@@ -20,7 +28,6 @@ include("./solver/modulation.jl");
 include("./solver/nonlinear.jl");
 #include("./plot.jl");
 
-export ϵ₀, μ₀, c₀, η₀
 export poynting, flux_direction, unwrap
 
 """
@@ -116,9 +123,10 @@ function flux_direction(dir_normal::Direction, pt1, pt2, geom, Ez, Hx, Hy)
     return (x_coords, Px)
 end
 
-function dolinearsolve(A, b; matrixtype=Pardiso.COMPLEX_NONSYM)
-    global warned_pardiso
+function dolinearsolve(A::SparseMatrixCSC, b::Array; matrixtype=Pardiso.COMPLEX_NONSYM)
     tic();
+    info(FDFD.logger, "Performing linear solve");
+    info(FDFD.logger, @sprintf("Problem unknowns: %.2E", length(b)));
     pardiso_success = false;
     try
         ps = PardisoSolver();
@@ -128,12 +136,12 @@ function dolinearsolve(A, b; matrixtype=Pardiso.COMPLEX_NONSYM)
         x = solve(ps, A, b);
         pardiso_success = true;
     catch
-        #warn(logger, "Pardiso solver has failed, falling back to lufact()");
+        debug(FDFD.logger, "Pardiso solver has failed, falling back to lufact()");
     end
     if ~pardiso_success
         x = lufact(A)\b;
     end
-    info(logger, @sprintf("Solve completed in %.2f min", toq()/60));
+    info(FDFD.logger, @sprintf("Time to solve: %.2f minutes", toq()/60));
     return x
 end
 

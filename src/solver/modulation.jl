@@ -9,33 +9,33 @@ mutable struct ModulatedDevice <: AbstractDevice
     ω::AbstractVector{Float}
     Ω::Float
     nsidebands::Integer
+    sharedpml::Bool
 end
 
-function ModulatedDevice(grid::Grid, ω::AbstractVector{Float}, Ω::Float, nsidebands::Integer)
+function ModulatedDevice(grid::Grid, ω::AbstractVector{Float}, Ω::Float, nsidebands::Integer; sharedpml=true)
     ϵᵣ = ones(Complex, size(grid));
     Δϵᵣ = zeros(Complex, size(grid));
     src = zeros(Complex, size(grid));
-    return ModulatedDevice(grid, ϵᵣ, Δϵᵣ, src, ω, Ω, nsidebands)
+    return ModulatedDevice(grid, ϵᵣ, Δϵᵣ, src, ω, Ω, nsidebands, sharedpml)
 end
+ModulatedDevice(grid::Grid, ω::Float, Ω::Float, nsidebands::Integer) = ModulatedDevice(grid, [ω], Ω, nsidebands);
 
 setup_Δϵᵣ!(d::ModulatedDevice, shapes::AbstractVector{<:Shape}) = _compose_shapes!(d.Δϵᵣ, d.grid, shapes)
 setup_Δϵᵣ!(d::ModulatedDevice, region, value) = _mask_values!(d.Δϵᵣ, d.grid, region, value)
 
 function solve(d::ModulatedDevice)
-    global verbose
+    (ϵ₀, μ₀, c₀) = normalize_parameters(d);
+
+    ω = d.ω[1];
     nsidebands = d.nsidebands;
     nfrequencies = 2*nsidebands+1;
     n = -nsidebands:1:nsidebands; 
     Ω = d.Ω;
-    ωn = d.ω + Ω*n; 
+    ωn = ω + Ω*n; 
 
-    info(LOGGER, @sprintf("Number of sidebands: %d", nsidebands));
-    info(LOGGER, @sprintf("Number of frequency components: %d", nfrequencies));
-    info(LOGGER, @sprintf("Number of unknowns: %.2E", nfrequencies*length(g)));
-
-    Ez = zeros(Complex128, nfrequencies, size(g, 1), size(g, 2));
-    Hx = zeros(Complex128, nfrequencies, size(g, 1), size(g, 2));
-    Hy = zeros(Complex128, nfrequencies, size(g, 1), size(g, 2));
+    Ez = zeros(Complex128, nfrequencies, size(d.grid, 1), size(d.grid, 2));
+    Hx = zeros(Complex128, nfrequencies, size(d.grid, 1), size(d.grid, 2));
+    Hy = zeros(Complex128, nfrequencies, size(d.grid, 1), size(d.grid, 2));
 
     Tϵ = spdiagm(ϵ₀*d.ϵᵣ[:]); #TODO: check reshape vs [:]
     TΔϵ = spdiagm(ϵ₀*d.Δϵᵣ[:]); #TODO: check reshape vs [:]
@@ -48,51 +48,51 @@ function solve(d::ModulatedDevice)
 
     # Reshape Mz into a vector
     b0 = 1im*ω*d.src[:]; #TODO: check reshape vs [:]
-    b = zeros(Complex128, length(g)*nfrequencies, 1); 
-    b[(nsidebands*length(g))+1:(nsidebands+1)*length(g), 1] = b0; 
+    b = zeros(Complex128, length(d.grid)*nfrequencies, 1); 
+    b[(nsidebands*length(d.grid))+1:(nsidebands+1)*length(d.grid), 1] = b0; 
 
-    info(LOGGER, "Assembly");
-    info(LOGGER, "Calculating system matrix");
+    info(FDFD.logger, "Calculating system matrix");
+    info(FDFD.logger, @sprintf("Number of sidebands (frequencies): %d (%d)", nsidebands, nfrequencies));
+    
     As = Array{SparseMatrixCSC}(nfrequencies);
-    Sxf = Array{SparseMatrixCSC}(sharedpml ? 1 : nfrequencies);
-    Sxb = Array{SparseMatrixCSC}(sharedpml ? 1 : nfrequencies);
-    Syf = Array{SparseMatrixCSC}(sharedpml ? 1 : nfrequencies);
-    Syb = Array{SparseMatrixCSC}(sharedpml ? 1 : nfrequencies);
-    if sharedpml
-        info(LOGGER, "Using shared PML");
+    Sxf = Array{SparseMatrixCSC}(d.sharedpml ? 1 : nfrequencies);
+    Sxb = Array{SparseMatrixCSC}(d.sharedpml ? 1 : nfrequencies);
+    Syf = Array{SparseMatrixCSC}(d.sharedpml ? 1 : nfrequencies);
+    Syb = Array{SparseMatrixCSC}(d.sharedpml ? 1 : nfrequencies);
+    if d.sharedpml
+        info(FDFD.logger, "Using shared PML");
         (Sxf[1], Sxb[1], Syf[1], Syb[1]) = S_create(d.grid, ω);
         A1 = Sxb[1]*δxb*1/μ₀*Sxf[1]*δxf + Syb[1]*δyb*1/μ₀*Syf[1]*δyf;
         for i = 1:nfrequencies
             As[i] = A1 + ωn[i]^2*Tϵ;
         end
     else
-        info(LOGGER, "Using frequency-by-frequency PML");
+        info(FDFD.logger, "Using frequency-by-frequency PML");
         for i = 1:nfrequencies
             (Sxf[i], Sxb[i], Syf[i], Syb[i]) = S_create(d.grid, ωn[i]);
-            As[i] = Sxb[i]*δxb*1/μ₀*Sxf[i]*δxf + Syb[i]*δyb*1/μ₀*Syf[i]*δyf + ω[i]^2*Tϵ;
+            As[i] = Sxb[i]*δxb*1/μ₀*Sxf[i]*δxf + Syb[i]*δyb*1/μ₀*Syf[i]*δyf + ωn[i]^2*Tϵ;
         end
     end
     if nsidebands > 0
-        info(LOGGER, "Calculating coupling matrix");
+        info(FDFD.logger, "Calculating coupling matrix");
         stencil_Cp = spdiagm([0.5*ωn[1:end-1].^2], [1], nfrequencies, nfrequencies);
         Cp = kron(stencil_Cp, conj(TΔϵ));
         stencil_Cm = spdiagm([0.5*ωn[2:end].^2],  [-1], nfrequencies, nfrequencies);
         Cm = kron(stencil_Cm, TΔϵ);
 
-        info(LOGGER, "Calculating total matrix");
+        info(FDFD.logger, "Calculating total matrix");
         A = blkdiag(As...) + Cp + Cm;
     else
         A = As[1]; 
     end
 
-    info(LOGGER, "Solving");
     ez = dolinearsolve(A, b, matrixtype=Pardiso.COMPLEX_NONSYM);
 
-    info(LOGGER, "Extracting results");
+    info(FDFD.logger, "Extracting results");
     for i = 1:nfrequencies
-        Ez[i, :, :] = reshape(ez[(i-1)*length(g)+1:i*length(g)], size(g));
-        Hx[i, :, :] = reshape(-1/1im/ωn[i]/μ₀*Syf[sharedpml ? 1 : i]*δyf*ez[(i-1)*length(g)+1:i*length(g)], size(g)); 
-        Hy[i, :, :] = reshape(1/1im/ωn[i]/μ₀*Sxf[sharedpml ? 1 : i]*δxf*ez[(i-1)*length(g)+1:i*length(g)], size(g)); 
+        Ez[i, :, :] = reshape(ez[(i-1)*length(d.grid)+1:i*length(d.grid)], size(d.grid));
+        Hx[i, :, :] = reshape(-1/1im/ωn[i]/μ₀*Syf[d.sharedpml ? 1 : i]*δyf*ez[(i-1)*length(d.grid)+1:i*length(d.grid)], size(d.grid)); 
+        Hy[i, :, :] = reshape(1/1im/ωn[i]/μ₀*Sxf[d.sharedpml ? 1 : i]*δxf*ez[(i-1)*length(d.grid)+1:i*length(d.grid)], size(d.grid)); 
     end
     
     return (Ez, Hx, Hy, ωn)

@@ -1,13 +1,13 @@
 export AbstractDevice, Device
 export setup_ϵᵣ!, setup_src!
 
-abstract type AbstractDevice end
+abstract type AbstractDevice{D} end
 
 Base.size(d::AbstractDevice) = size(d.grid);
 Base.size(d::AbstractDevice, i::Int) = size(d.grid, i);
 Base.length(d::AbstractDevice) = length(d.grid);
 
-mutable struct Device{D} <: AbstractDevice
+mutable struct Device{D} <: AbstractDevice{D}
 	grid::Grid{D}
 	ϵᵣ::Array{Complex}
     src::Array{Complex}
@@ -78,6 +78,15 @@ setup_src!(d::AbstractDevice, region, value) = _mask_values!(d.src, d.grid, regi
 function setup_src!(d::AbstractDevice, xy::AbstractArray) 
     (indx, indy) = coord2ind(d.grid, xy);
     d.src[indx, indy] = 1im;
+end
+
+function setup_src!(d::AbstractDevice, xy::AbstractArray, srcnormal::Direction) 
+    (indx, indy) = coord2ind(d.grid, xy);
+    if srcnormal == DirectionX
+        d.src[indx, :] = 1im;
+    elseif srcnormal == DirectionY
+        d.src[:, indy] = 1im;
+    end
 end
 
 function setup_src!(d::AbstractDevice, pol::Polarization, neff::Number, srcxy::AbstractArray, srcnormal::Direction, srcpoints::Int)

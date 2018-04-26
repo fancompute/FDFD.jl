@@ -1,8 +1,8 @@
 export ModulatedDevice
 export solve, setup_Δϵᵣ!
 
-mutable struct ModulatedDevice <: AbstractDevice
-    grid::Grid
+mutable struct ModulatedDevice{D} <: AbstractDevice{D}
+    grid::Grid{D}
     ϵᵣ::Array{Complex}
     Δϵᵣ::Array{Complex}
     src::Array{Complex}
@@ -31,11 +31,7 @@ function solve(d::ModulatedDevice)
     nfrequencies = 2*nsidebands+1;
     n = -nsidebands:1:nsidebands; 
     Ω = d.Ω;
-    ωn = ω + Ω*n; 
-
-    Ez = zeros(Complex128, nfrequencies, size(d.grid, 1), size(d.grid, 2));
-    Hx = zeros(Complex128, nfrequencies, size(d.grid, 1), size(d.grid, 2));
-    Hy = zeros(Complex128, nfrequencies, size(d.grid, 1), size(d.grid, 2));
+    ωn = ω + Ω*n;
 
     Tϵ = spdiagm(ϵ₀*d.ϵᵣ[:]); #TODO: check reshape vs [:]
     TΔϵ = spdiagm(ϵ₀*d.Δϵᵣ[:]); #TODO: check reshape vs [:]
@@ -89,11 +85,14 @@ function solve(d::ModulatedDevice)
     ez = dolinearsolve(A, b, matrixtype=Pardiso.COMPLEX_NONSYM);
 
     info(FDFD.logger, "Extracting results");
+
+    fields = Array{FieldTM}(nfrequencies);
     for i = 1:nfrequencies
-        Ez[i, :, :] = reshape(ez[(i-1)*length(d.grid)+1:i*length(d.grid)], size(d.grid));
-        Hx[i, :, :] = reshape(-1/1im/ωn[i]/μ₀*Syf[d.sharedpml ? 1 : i]*δyf*ez[(i-1)*length(d.grid)+1:i*length(d.grid)], size(d.grid)); 
-        Hy[i, :, :] = reshape(1/1im/ωn[i]/μ₀*Sxf[d.sharedpml ? 1 : i]*δxf*ez[(i-1)*length(d.grid)+1:i*length(d.grid)], size(d.grid)); 
+        ezi = ez[(i-1)*length(d.grid)+1:i*length(d.grid)];
+        hxi = -1/1im/ωn[i]/μ₀*Syf[d.sharedpml ? 1 : i]*δyf*ezi; 
+        hyi = 1/1im/ωn[i]/μ₀*Sxf[d.sharedpml ? 1 : i]*δxf*ezi; 
+        fields[i] = FieldTM(d.grid, ezi, hxi, hyi)
     end
     
-    return (Ez, Hx, Hy, ωn)
+    return (fields, ωn)
 end

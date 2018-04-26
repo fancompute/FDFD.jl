@@ -1,34 +1,22 @@
 module FDFD
-using GeometryPrimitives, StaticArrays, Pardiso, Memento
-
+using Memento
 const logger = getlogger(current_module());
+__init__() = Memento.register(logger);
 
-#function __init__()
-#    Memento.register(logger);
-#    #setloglevel!("info");
-#end
-
-function setloglevel!(level::String)
-    logger = FDFD.logger;
-    Memento.setlevel!(logger, level);
-    #while logger.name != "root"
-    #    logger = Memento.getparent(logger.name)
-    #    Memento.setlevel!(logger, level)
-    #end
-end
+using GeometryPrimitives, StaticArrays, Pardiso
 
 include("./types.jl");
 include("./grid.jl");
-#include("./data.jl");
+include("./data.jl");
 include("./device.jl");
 include("./pml.jl");
 include("./solver/driven.jl");
 include("./solver/eigen.jl");
 include("./solver/modulation.jl");
 include("./solver/nonlinear.jl");
-#include("./plot.jl");
+include("./plot.jl");
 
-export poynting, flux_direction, unwrap
+export poynting, flux_surface, unwrap
 
 """
     δ(w::Direction, s::DerivativeDirection, g::Grid)
@@ -84,43 +72,37 @@ end
 
 
 """
-function poynting(polarization::Polarization, Ez, Hx, Hy)
-    if polarization == TM
-        Ez_x = grid_average(Ez, DirectionX);
-        Ez_y = grid_average(Ez, DirectionY);
-        Sx = -1/2*real(Ez_x.*conj(Hy));
-        Sy = 1/2*real(Ez_y.*conj(Hx));
-    elseif polarization == TE
-        error("Not implemented yet...");
-    else
-        error("Invalid polarization");
+function poynting(field::Field)
+    if isa(field, FieldTM)
+        Ez_x = grid_average(field.Ez, DirectionX);
+        Ez_y = grid_average(field.Ez, DirectionY);
+        Sx = -0.5*real.(Ez_x.*conj(field.Hy));
+        Sy = 0.5*real.(Ez_y.*conj(field.Hx));
+        return Flux2D(field.grid, Sx, Sy)
     end
-    return (Sx, Sy)
+    if isa(field, FieldTE)
+        error("Not implemented yet...");
+    end
+    error("Invalid polarization");
 end
 
-function flux_direction(dir_normal::Direction, pt1, pt2, geom, Ez, Hx, Hy)
-    if dir_normal == DirectionX
-        (ind0, _) = coord2ind(geom, (pt1, geom.yrange[1]));
-        (ind1, _) = coord2ind(geom, (pt2, geom.yrange[1]));
-        dh = dy(geom);
-    elseif dir_normal == DirectionY
+flux_surface(field::Field, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction) = flux_surface(poynting(field), ptmid, width, nrm);
+
+function flux_surface(flux::Flux2D, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)
+    (x0, y0) = coord2ind(flux.grid, ptmid);
+    if nrm == DirectionX
+        indx = x0;
+        if isinf(width)
+            indy = 1:flux.grid.N[2];
+        else
+            y1 = y2ind(flux.grid,ptmid[2]+width/2);
+            y2 = y2ind(flux.grid,ptmid[2]-width/2);
+            indy = y1:y2;
+        end
+        return sum(flux.Sx[indx,indy])*dy(flux.grid)
+    elseif nrm == DirectionY
         error("Not implemented yet...")
     end
-    ind_cells = ind0:ind1;
-    N_cells = ind1-ind0+1;
-
-    N_freqs = size(Ez)[1];
-    Px = zeros(Real,N_freqs,N_cells);
-
-    for i = 1:N_freqs
-        (Sx, _) = poynting(TM, Ez[i,:,:], Hx[i,:,:], Hy[i,:,:]);
-        Px[i, :] = sum(Sx[ind0:ind1,:],2)*dh;
-    end
-
-    x_coords = xc(geom);
-    x_coords = x_coords[ind0:ind1];
-    Px = Px.';
-    return (x_coords, Px)
 end
 
 function dolinearsolve(A::SparseMatrixCSC, b::Array; matrixtype=Pardiso.COMPLEX_NONSYM)

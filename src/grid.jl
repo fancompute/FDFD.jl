@@ -1,5 +1,6 @@
 export Grid
-export dx, dy, dh, xc, yc, xe, ye, coord2ind
+export dx, dy, dh, xc, yc, xe, ye
+export coord2ind, x2ind, y2ind
 
 const DEFAULT_L₀ = 1e-6;
 
@@ -86,11 +87,23 @@ xe(g::Grid, i::Int64) = xe(g)[ ind2sub(size(g),i)[1] ];
 ye(g::Grid, i::Int64) = ye(g)[ ind2sub(size(g),i)[2] ];
 
 function coord2ind(g::Grid{D}, xy::AbstractArray) where {D}
-    indx = Int(round((xy[1]-g.bounds[1][1])/g.L[1]*size(g,1))+1);
+    indx = x2ind(g, xy[1]);
     if D == 1
     	return indx
-    else
-    	indy = Int(round((xy[2]-g.bounds[1][2])/g.L[2]*size(g,2))+1);
-	end
-    return (indx, indy)
+    end
+    return (indx, y2ind(g, xy[2]))
+end
+
+function x2ind(g::Grid, x::Real)
+    ind = Int(round((x-g.bounds[1][1])/g.L[1]*size(g,1))+1);
+    ind < 1 && return 1
+    ind > g.N[1] && return g.N[1] 
+    return ind
+end
+
+function y2ind(g::Grid, y::Real)
+    ind = Int(round((y-g.bounds[1][2])/g.L[2]*size(g,2))+1);
+    ind < 1 && return 1
+    ind > g.N[2] && return g.N[2] 
+    return ind
 end

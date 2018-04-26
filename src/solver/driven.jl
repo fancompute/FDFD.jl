@@ -26,10 +26,6 @@ function solve(d::Device)
 
     hx = -1/1im/ω/μ₀*δyb*ez;
     hy = 1/1im/ω/μ₀*δxb*ez;
-
-    Hx = reshape(hx, size(d.grid));
-    Hy = reshape(hy, size(d.grid));
-    Ez = reshape(ez, size(d.grid));
-
-    return (Ez, Hx, Hy)
+    
+    return FieldTM(d.grid, ez, hx, hy)
 end

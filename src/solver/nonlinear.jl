@@ -4,10 +4,10 @@ export IterativeMethod, IterativeMethodGN, IterativeMethodB
 
 @enum IterativeMethod IterativeMethodGN=1 IterativeMethodB=2
 
-abstract type AbstractNonlinearDevice <: AbstractDevice end
+abstract type AbstractNonlinearDevice{D} <: AbstractDevice{D} end
 
-mutable struct χ3Device <: AbstractNonlinearDevice
-    grid::Grid
+mutable struct χ3Device{D} <: AbstractNonlinearDevice{D}
+    grid::Grid{D}
     ϵᵣ::Array{Complex}
     χ::Array{Float}
     src::Array{Complex}
@@ -47,7 +47,7 @@ function solve(d::χ3Device, which_method::IterativeMethod)
     info(FDFD.logger, "Solving linear system");
     ez = dolinearsolve(A, b, matrixtype=Pardiso.COMPLEX_SYM);
 
-    coeff = ω^2*ϵ₀*3*d.χ[:];
+    coeff = ω^2*ϵ₀*3*d.χ[:]/d.grid.L₀;
 
     if which_method == IterativeMethodB
         info(FDFD.logger, "Starting nonlinear iteration using Born");
@@ -60,12 +60,8 @@ function solve(d::χ3Device, which_method::IterativeMethod)
 
     hx = -1/1im/ω/μ₀*δyb*ez;
     hy = 1/1im/ω/μ₀*δxb*ez;
-
-    Hx = reshape(hx, size(d.grid));
-    Hy = reshape(hy, size(d.grid));
-    Ez = reshape(ez, size(d.grid));
-
-    return (Ez, err)
+    
+    return (FieldTM(d.grid, ez, hx, hy), err)
 end
 
 function _doborn(ez, A, b, coeff; tol = 1e-12, maxiterations = 50)

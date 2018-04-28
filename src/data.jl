@@ -1,4 +1,4 @@
-export SolvedResult, Field, FieldTM, FieldTE, Flux2D
+export SolvedResult, Field, FieldTM, FieldTE, Flux2D, FieldSlice
 
 abstract type SolvedResult end
 abstract type Field <: SolvedResult end
@@ -26,4 +26,9 @@ mutable struct FieldTE <: Field
     Hz::Array{Complex,2}
     Ex::Array{Complex,2}
     Ey::Array{Complex,2}
+end
+
+mutable struct FieldSlice <: Field
+    grid::Grid{1}
+    val::Array{Complex,1}
 end

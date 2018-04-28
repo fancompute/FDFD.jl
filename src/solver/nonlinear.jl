@@ -14,6 +14,7 @@ mutable struct χ3Device{D} <: AbstractNonlinearDevice{D}
     ω::AbstractVector{Float}
 end
 
+"    χ3Device(grid::Grid, ω::AbstractVector{Float})"
 function χ3Device(grid::Grid, ω::AbstractVector{Float})
     ϵᵣ = ones(Complex, size(grid));
     χ = zeros(Float, size(grid));
@@ -21,9 +22,13 @@ function χ3Device(grid::Grid, ω::AbstractVector{Float})
     return χ3Device(grid, ϵᵣ, χ, src, ω)
 end
 
+"    setup_χ!(d::χ3Device, shapes::AbstractVector{<:Shape})"
 setup_χ!(d::χ3Device, shapes::AbstractVector{<:Shape}) = _compose_shapes!(d.χ, d.grid, shapes)
+
+"    setup_χ!(d::χ3Device, region, value)"
 setup_χ!(d::χ3Device, region, value) = _mask_values!(d.χ, d.grid, region, value)
 
+"    solve(d::χ3Device, which_method::IterativeMethod)"
 function solve(d::χ3Device, which_method::IterativeMethod)
     (ϵ₀, μ₀, c₀) = normalize_parameters(d);
     ω = d.ω[1];

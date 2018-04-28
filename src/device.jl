@@ -14,15 +14,20 @@ mutable struct Device{D} <: AbstractDevice{D}
     ω::AbstractVector{Float}
 end
 
+"    Device(grid::Grid, ω::AbstractVector{Float})"
 function Device(grid::Grid, ω::AbstractVector{Float})
 	ϵᵣ = ones(Complex, size(grid));
     src = zeros(Complex, size(grid));
 	return Device(grid, ϵᵣ, src, ω)
 end
 
+"    Device(grid::Grid, ω::Float)"
 Device(grid::Grid, ω::Float) = Device(grid, [ω]);
 
+"    normalize_parameters(g::Grid)"
 normalize_parameters(g::Grid) = (ϵ₀*g.L₀, μ₀*g.L₀, c₀/g.L₀);
+
+"    normalize_parameters(d::AbstractDevice)"
 normalize_parameters(d::AbstractDevice) = normalize_parameters(d.grid);
 
 function _compose_shapes!(pixels::AbstractArray, grid::Grid, shapes::AbstractVector{<:Shape})
@@ -70,16 +75,22 @@ function _mask_values!(pixels::AbstractArray, grid::Grid, region, value)
     end;
 end
 
+"    setup_ϵᵣ!(d::AbstractDevice, shapes::AbstractVector{<:Shape})"
 setup_ϵᵣ!(d::AbstractDevice, shapes::AbstractVector{<:Shape}) = _compose_shapes!(d.ϵᵣ, d.grid, shapes)
+
+"    setup_ϵᵣ!(d::AbstractDevice, region, value)"
 setup_ϵᵣ!(d::AbstractDevice, region, value) = _mask_values!(d.ϵᵣ, d.grid, region, value)
 
+"    setup_src!(d::AbstractDevice, region, value)"
 setup_src!(d::AbstractDevice, region, value) = _mask_values!(d.src, d.grid, region, value)
 
+"    setup_src!(d::AbstractDevice, xy::AbstractArray)"
 function setup_src!(d::AbstractDevice, xy::AbstractArray) 
     (indx, indy) = coord2ind(d.grid, xy);
     d.src[indx, indy] = 1im;
 end
 
+"    setup_src!(d::AbstractDevice, xy::AbstractArray, srcnormal::Direction)"
 function setup_src!(d::AbstractDevice, xy::AbstractArray, srcnormal::Direction) 
     (indx, indy) = coord2ind(d.grid, xy);
     if srcnormal == DirectionX
@@ -89,9 +100,15 @@ function setup_src!(d::AbstractDevice, xy::AbstractArray, srcnormal::Direction)
     end
 end
 
-function setup_src!(d::AbstractDevice, pol::Polarization, neff::Number, srcxy::AbstractArray, srcnormal::Direction, srcpoints::Int)
+"    setup_src!(d::AbstractDevice, pol::Polarization, neff::Number, srcxy::AbstractArray, srcnormal::Direction, srcwidth::Number)"
+function setup_src!(d::AbstractDevice, pol::Polarization, neff::Number, srcxy::AbstractArray, srcnormal::Direction, srcwidth::Number)
     (indx, indy) = coord2ind(d.grid, srcxy);
-    M = Int64(round((srcpoints-1)/2));
+
+    srcnormal == DirectionX && (srcpoints = Int(round(srcwidth/dy(d.grid))));
+    srcnormal == DirectionY && (srcpoints = Int(round(srcwidth/dx(d.grid))));
+    srcpoints % 2 == 0 && (srcpoints += 1); # source points is odd
+
+    M = Int((srcpoints-1)/2);
     srcpoints = 2*M+1;
 
     if srcnormal == DirectionX

@@ -4,7 +4,6 @@ export coord2ind, x2ind, y2ind
 
 const DEFAULT_L₀ = 1e-6;
 
-# Base Grid struc
 struct Grid{D}
     L::SVector{D,Float} # Length of dimensions
     L₀::Float # Length unit
@@ -19,7 +18,11 @@ Base.size(g::Grid{2}) = (g.N[1], g.N[2])
 Base.size(g::Grid{1}) = (g.N[1])
 Base.size(g::Grid{D}, i::Integer) where {D} = i > D ? 1 : g.N[i]
 
-# 2D Grid 
+"""
+    Grid(dh::Number, Npml::AbstractArray{<:Integer}, xrange::AbstractArray{<:Real}, yrange::AbstractArray{<:Real}; L₀=DEFAULT_L₀)
+
+Constructs a 2D Grid.
+"""
 function Grid(dh::Number, Npml::AbstractArray{<:Integer}, xrange::AbstractArray{<:Real}, yrange::AbstractArray{<:Real}; L₀=DEFAULT_L₀)
     L = SVector{2}([ Float(xrange[2]-xrange[1]), Float(yrange[2]-yrange[1])]);
     N = SVector{2}(Int.(round.(L/dh)));
@@ -28,8 +31,12 @@ function Grid(dh::Number, Npml::AbstractArray{<:Integer}, xrange::AbstractArray{
     return Grid(L, L₀, N, SVector{2}(Npml), (bounds1, bounds2));
 end
 
-# 1D Grid 
-function Grid(dh::Number, Npml::AbstractArray{<:Integer}, xrange::AbstractArray{<:Real}; L₀=DEFAULT_L₀)
+"""
+    Grid(dh::Number, Npml::Integer, xrange::AbstractArray{<:Real}; L₀=DEFAULT_L₀)
+
+Constructs a 1D Grid.
+"""
+function Grid(dh::Number, Npml::Integer, xrange::AbstractArray{<:Real}; L₀=DEFAULT_L₀)
     L = SVector{1}(Float(xrange[2]-xrange[1]));
     N = SVector{1}(Int.(round.(L/dh)));
     bounds1 = SVector{1}(Float(xrange[1]));
@@ -37,6 +44,11 @@ function Grid(dh::Number, Npml::AbstractArray{<:Integer}, xrange::AbstractArray{
     return Grid(L, L₀, N, SVector{1}(Npml), (bounds1, bounds2));
 end
 
+"""
+    Grid(N::Integer, xrange::AbstractArray{<:Real}; L₀=DEFAULT_L₀)
+
+Constructs a 1D Grid.
+"""
 function Grid(N::Integer, xrange::AbstractArray{<:Real}; L₀=DEFAULT_L₀)
     L = SVector{1}(Float(xrange[2]-xrange[1]));
     N = SVector{1}(N);
@@ -46,7 +58,7 @@ function Grid(N::Integer, xrange::AbstractArray{<:Real}; L₀=DEFAULT_L₀)
 end
 
 
-# Coordinate functions
+"Returns the cell size for the grid `g` in the direction specified by `w`"
 function dh(g::Grid, w::Direction)
 	w == DirectionX && return dx(g)
     w == DirectionY && return dy(g)

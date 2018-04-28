@@ -1,5 +1,6 @@
 export solve
 
+"    solve(d::AbstractDevice, pol::Polarization, neff::Number, neigenvalues::Int)"
 function solve(d::AbstractDevice, pol::Polarization, neff::Number, neigenvalues::Int)
     (ϵ₀, μ₀, c₀) = normalize_parameters(d);
     ω = d.ω[1];
@@ -23,6 +24,7 @@ function solve(d::AbstractDevice, pol::Polarization, neff::Number, neigenvalues:
     estimatedβ = ω/c₀*neff;
 
     (β², vectors) = eigs(A, nev=neigenvalues, sigma=estimatedβ^2);
+
     β = sqrt.(β²);
     return (β, vectors)
 end

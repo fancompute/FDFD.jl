@@ -1,5 +1,6 @@
 export solve
 
+"    solve(d::Device)"
 function solve(d::Device)
     (ϵ₀, μ₀, c₀) = normalize_parameters(d);
     ω = d.ω[1];

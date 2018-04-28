@@ -12,17 +12,24 @@ mutable struct ModulatedDevice{D} <: AbstractDevice{D}
     sharedpml::Bool
 end
 
+"    ModulatedDevice(grid::Grid, ω::AbstractVector{Float}, Ω::Float, nsidebands::Integer; sharedpml=true)"
 function ModulatedDevice(grid::Grid, ω::AbstractVector{Float}, Ω::Float, nsidebands::Integer; sharedpml=true)
     ϵᵣ = ones(Complex, size(grid));
     Δϵᵣ = zeros(Complex, size(grid));
     src = zeros(Complex, size(grid));
     return ModulatedDevice(grid, ϵᵣ, Δϵᵣ, src, ω, Ω, nsidebands, sharedpml)
 end
+
+"    ModulatedDevice(grid::Grid, ω::Float, Ω::Float, nsidebands::Integer)"
 ModulatedDevice(grid::Grid, ω::Float, Ω::Float, nsidebands::Integer) = ModulatedDevice(grid, [ω], Ω, nsidebands);
 
+"    setup_Δϵᵣ!(d::ModulatedDevice, shapes::AbstractVector{<:Shape})"
 setup_Δϵᵣ!(d::ModulatedDevice, shapes::AbstractVector{<:Shape}) = _compose_shapes!(d.Δϵᵣ, d.grid, shapes)
+
+"    setup_Δϵᵣ!(d::ModulatedDevice, region, value)"
 setup_Δϵᵣ!(d::ModulatedDevice, region, value) = _mask_values!(d.Δϵᵣ, d.grid, region, value)
 
+"    solve(d::ModulatedDevice)"
 function solve(d::ModulatedDevice)
     (ϵ₀, μ₀, c₀) = normalize_parameters(d);
 

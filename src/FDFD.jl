@@ -86,8 +86,10 @@ function poynting(field::Field)
     error("Invalid polarization");
 end
 
+"   flux_surface(field::Field, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction) = flux_surface(poynting(field), ptmid, width, nrm)"
 flux_surface(field::Field, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction) = flux_surface(poynting(field), ptmid, width, nrm);
 
+"    flux_surface(flux::Flux2D, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)"
 function flux_surface(flux::Flux2D, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)
     (x0, y0) = coord2ind(flux.grid, ptmid);
     if nrm == DirectionX
@@ -95,9 +97,9 @@ function flux_surface(flux::Flux2D, ptmid::AbstractArray{<:Real}, width::Real, n
         if isinf(width)
             indy = 1:flux.grid.N[2];
         else
-            y1 = y2ind(flux.grid,ptmid[2]+width/2);
-            y2 = y2ind(flux.grid,ptmid[2]-width/2);
-            indy = y1:y2;
+            y1 = y2ind(flux.grid,ptmid[2]-width/2);
+            y2 = y2ind(flux.grid,ptmid[2]+width/2);
+            indy = y1:1:y2;
         end
         return sum(flux.Sx[indx,indy])*dy(flux.grid)
     elseif nrm == DirectionY

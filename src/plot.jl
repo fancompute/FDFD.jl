@@ -2,6 +2,16 @@ export plot_field, plot_device
 
 using PyPlot, PyCall
 
+"    plot_field(fields::Array{<:Field}; cbar::Bool=false, funcz=real)"
+function plot_field(fields::Array{<:Field}; cbar::Bool=false, funcz=real)
+	nfields = length(fields);
+	fig, axs = subplots(nfields, 1, constrained_layout=true);
+	for i in eachindex(fields)
+		plot_field(axs[i], fields[i]; cbar=cbar, funcz=funcz);
+	end
+	return axs
+end
+
 "    plot_field(field::Field; cbar::Bool=false, funcz=real)"
 function plot_field(field::Field; cbar::Bool=false, funcz=real)
 	fig, ax = subplots(1);

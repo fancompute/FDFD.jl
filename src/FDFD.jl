@@ -86,6 +86,16 @@ function poynting(field::Field)
     error("Invalid polarization");
 end
 
+"    flux_surface(fields::Array{<:Field}, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)"
+function flux_surface(fields::Array{<:Field}, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)
+    Nfields = length(fields);
+    P = zeros(Float, Nfields);
+    for i in eachindex(fields)
+        P[i] = flux_surface(poynting(fields[i]), ptmid, width, nrm);
+    end
+    return P
+end
+
 "   flux_surface(field::Field, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction) = flux_surface(poynting(field), ptmid, width, nrm)"
 flux_surface(field::Field, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction) = flux_surface(poynting(field), ptmid, width, nrm);
 

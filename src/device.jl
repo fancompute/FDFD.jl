@@ -1,5 +1,5 @@
-export AbstractDevice, Device
-export setup_ϵᵣ!, setup_src!
+export AbstractDevice, Device, Mode
+export setup_ϵᵣ!, setup_src!, add_mode!
 
 abstract type AbstractDevice{D} end
 
@@ -7,18 +7,31 @@ Base.size(d::AbstractDevice) = size(d.grid);
 Base.size(d::AbstractDevice, i::Int) = size(d.grid, i);
 Base.length(d::AbstractDevice) = length(d.grid);
 
+struct Mode
+    pol::Polarization
+    dir::Direction
+    neff::Number
+    coor::AbstractArray
+    width::Number
+end
+
+function add_mode!(d::AbstractDevice, mode::Mode)
+    append!(d.modes, [mode]);
+end
+
 mutable struct Device{D} <: AbstractDevice{D}
 	grid::Grid{D}
 	ϵᵣ::Array{Complex}
     src::Array{Complex}
     ω::AbstractVector{Float}
+    modes::Array{Mode}
 end
 
 "    Device(grid::Grid, ω::AbstractVector{Float})"
 function Device(grid::Grid, ω::AbstractVector{Float})
 	ϵᵣ = ones(Complex, size(grid));
     src = zeros(Complex, size(grid));
-	return Device(grid, ϵᵣ, src, ω)
+	return Device(grid, ϵᵣ, src, ω, Array{Mode}(0))
 end
 
 "    Device(grid::Grid, ω::Float)"
@@ -100,8 +113,8 @@ function setup_src!(d::AbstractDevice, xy::AbstractArray, srcnormal::Direction)
     end
 end
 
-"    setup_src!(d::AbstractDevice, pol::Polarization, neff::Number, srcxy::AbstractArray, srcnormal::Direction, srcwidth::Number)"
-function setup_src!(d::AbstractDevice, pol::Polarization, neff::Number, srcxy::AbstractArray, srcnormal::Direction, srcwidth::Number)
+"    setup_mode!(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, srcxy::AbstractArray, srcnormal::Direction, srcwidth::Number)"
+function setup_mode!(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, srcxy::AbstractArray, srcnormal::Direction, srcwidth::Number)
     (indx, indy) = coord2ind(d.grid, srcxy);
 
     srcnormal == DirectionX && (srcpoints = Int(round(srcwidth/dy(d.grid))));
@@ -122,8 +135,8 @@ function setup_src!(d::AbstractDevice, pol::Polarization, neff::Number, srcxy::A
     end
 
     g1D   = Grid(srcpoints, [0 srcpoints*dh], L₀=d.grid.L₀);
-    dev1D = Device(g1D, d.ω);
+    dev1D = Device(g1D, ω);
     dev1D.ϵᵣ = d.ϵᵣ[indx, indy];
     (β, vector) = solve(dev1D, pol, neff, 1);
-    d.src[indx, indy] = abs.(vector);
+    d.src[indx, indy] += abs.(vector);
 end

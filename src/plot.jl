@@ -1,4 +1,4 @@
-export plot_field, plot_device
+export plot_field, plot_device, add_scalebar
 
 using PyPlot, PyCall
 
@@ -53,6 +53,13 @@ function plot_device(device::AbstractDevice; outline::Bool=false)
 	return ax
 end
 
+"    plot_device(ax::Array{<:PyObject}, device::AbstractDevice; outline::Bool=false, lc::String=\"k\")"
+function plot_device(axs::Array{<:PyObject}, device::AbstractDevice; outline::Bool=false, lc::String="k")
+	for i in eachindex(axs)
+		plot_device(axs[i], device, outline=outline, lc=lc);
+	end
+end
+
 "    plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String=\"k\")"
 function plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String="k")
 	Z = real.(device.ϵᵣ)';
@@ -67,4 +74,21 @@ function plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, 
 	end
 	ax[:set_xlabel](L"$x$");
 	ax[:set_ylabel](L"$y$");
+end
+
+"    add_scalebar(axs::Array{<:PyObject}, xy::AbstractArray; fc::String=\"k\", width::Number=1.0, height::Number=0.125, hide::Bool=true)"
+function add_scalebar(axs::Array{<:PyObject}, xy::AbstractArray; fc::String="k", width::Number=1.0, height::Number=0.125, hide::Bool=true)
+	for i in eachindex(axs)
+		add_scalebar(axs[i], xy, fc=fc, width=width, height=height, hide=hide);
+	end
+end
+
+"    add_scalebar(ax::PyObject, xy::AbstractArray; fc::String=\"k\", width::Number=1.0, height::Number=0.125, hide::Bool=true)"
+function add_scalebar(ax::PyObject, xy::AbstractArray; fc::String="k", width::Number=1.0, height::Number=0.125, hide::Bool=true)
+    ax[:add_patch](matplotlib[:patches][:Rectangle](xy-[width/2,height/2],width,height,fc=fc));
+    ax[:annotate](xy=xy+[0,height/2],s=@sprintf("%d",width)*L" $\mu$m",fontsize="smaller",ha="center",va="bottom",multialignment="center",color=fc);
+    if hide
+    	ax[:axes][:get_xaxis]()[:set_visible](false);
+    	ax[:axes][:get_yaxis]()[:set_visible](false);
+    end
 end

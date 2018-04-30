@@ -49,17 +49,17 @@ function solve(d::χ3Device, which_method::IterativeMethod)
 
     A = δxf*μ₀^-1*δxb + δyf*μ₀^-1*δyb + ω^2*Tϵ;
     b = 1im*ω*d.src[:];
-    info(FDFD.logger, "Solving linear system");
+    println("Solving linear system");
     ez = dolinearsolve(A, b, matrixtype=Pardiso.COMPLEX_SYM);
 
     coeff = ω^2*ϵ₀*3*d.χ[:]/d.grid.L₀;
 
     if which_method == IterativeMethodB
-        info(FDFD.logger, "Starting nonlinear iteration using Born");
+        println("Starting nonlinear iteration using Born");
         (ez, err) = _doborn(ez, A, b, coeff);
     end
     if which_method == IterativeMethodGN
-        info(FDFD.logger, "Starting nonlinear iteration using Gauss-Newton");
+        println("Starting nonlinear iteration using Gauss-Newton");
         (ez, err) = _donewton(ez, A, b, coeff);
     end
 
@@ -73,14 +73,14 @@ function _doborn(ez, A, b, coeff; tol = 1e-12, maxiterations = 50)
     i = 1;
     err = [1.0];
     while err[end] > tol && i <= maxiterations
-        info(FDFD.logger, @sprintf("iteration number: %d", i));
+        println(@sprintf("iteration number: %d", i));
         ez_new = dolinearsolve(A + spdiagm(coeff.*ez.*conj.(ez)), b, matrixtype=Pardiso.COMPLEX_SYM);
         append!(err, norm(ez_new - ez)/norm(ez));
         
         ez = ez_new;
         i += 1;
 
-        info(FDFD.logger, @sprintf("step error: %e", err[end]));
+        println(@sprintf("step error: %e", err[end]));
     end
     return (ez, err)
 end
@@ -92,7 +92,7 @@ function _donewton(ez, A, b, coeff; tol = 1e-12, maxiterations = 50)
 
     ez = [ez; conj.(ez)];
     while err[end] > tol && i <= maxiterations
-        info(FDFD.logger, @sprintf("iteration number: %d", i));
+        println(@sprintf("iteration number: %d", i));
         F = (A + spdiagm(coeff.*ez[1:M].*conj.(ez[1:M])))*ez[1:M] - b;
         J1  = A + spdiagm(2*coeff.*conj.(ez[1:M]).*ez[1:M]);
         J2 = spdiagm(coeff.*ez[1:M].*ez[1:M]);
@@ -102,7 +102,7 @@ function _donewton(ez, A, b, coeff; tol = 1e-12, maxiterations = 50)
         ez = ez - δez;
         append!(err, norm(δez)/normez);
         i += 1;
-        info(FDFD.logger, @sprintf("step error: %e", err[end]));
+        println(@sprintf("step error: %e", err[end]));
     end
     ez = ez[1:M];
     return (ez, err)

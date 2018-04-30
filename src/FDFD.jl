@@ -1,7 +1,4 @@
 module FDFD
-using Memento
-const logger = getlogger(current_module());
-__init__() = Memento.register(logger);
 
 using GeometryPrimitives, StaticArrays, Pardiso
 
@@ -119,23 +116,28 @@ end
 
 function dolinearsolve(A::SparseMatrixCSC, b::Array; matrixtype=Pardiso.COMPLEX_NONSYM)
     tic();
-    info(FDFD.logger, "Performing linear solve");
-    info(FDFD.logger, @sprintf("Problem unknowns: %.2E", length(b)));
+    println("Performing linear solve");
+    println(@sprintf("Problem unknowns: %.2E", length(b)));
     pardiso_success = false;
     try
         ps = PardisoSolver();
         set_matrixtype!(ps, matrixtype);
         set_solver!(ps, Pardiso.DIRECT_SOLVER);
         pardisoinit(ps);
+        try
+            println("Solving with ", ENV["OMP_NUM_THREADS"], " threads");
+        catch
+            println("(!) Couldn't read OMP_NUM_THREADS");
+        end
         x = solve(ps, A, b);
         pardiso_success = true;
     catch
-        debug(FDFD.logger, "Pardiso solver has failed, falling back to lufact()");
+        println("(!) Pardiso solver has failed, falling back to lufact()");
     end
     if ~pardiso_success
         x = lufact(A)\b;
     end
-    info(FDFD.logger, @sprintf("Time to solve: %.2f minutes", toq()/60));
+    println(@sprintf("Time to solve: %.2f minutes", toq()/60));
     return x
 end
 

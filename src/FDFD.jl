@@ -129,7 +129,7 @@ function dolinearsolve(A::SparseMatrixCSC, b::Array; matrixtype=Pardiso.COMPLEX_
         catch
             println("(!) Couldn't read OMP_NUM_THREADS");
         end
-        x = solve(ps, A, b);
+        x = Pardiso.solve(ps, A, b);
         pardiso_success = true;
     catch
         println("(!) Pardiso solver has failed, falling back to lufact()");

@@ -41,6 +41,6 @@ function solve(d::Device)
         fields[i] = FieldTM(d.grid, ez, hx, hy);
     end
     
-    Nω == 1 && return fields[i]
+    Nω == 1 && return fields[1]
     return fields
 end

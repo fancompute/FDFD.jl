@@ -70,7 +70,12 @@ function plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, 
 	else
 		extents = [ device.grid.bounds[1][1], device.grid.bounds[2][1], 
 		            device.grid.bounds[1][2], device.grid.bounds[2][2] ];
-		ax[:imshow](Z, extent=extents, origin="lower");
+		ax[:imshow](Z, extent=extents, origin="lower", cmap="YlGnBu");
+	end
+
+	if isa(device, ModulatedDevice)
+		Z2 = abs.(device.Δϵᵣ)';
+		ax[:contour](xc(device.grid), yc(device.grid), Z2, levels=1, linewidths=0.7, colors="r");
 	end
 	ax[:set_xlabel](L"$x$");
 	ax[:set_ylabel](L"$y$");

@@ -67,8 +67,8 @@ function solve(d::ModulatedDevice)
         b = zeros(Complex128, length(d.grid)*nfrequencies, 1); 
         b[(nsidebands*length(d.grid))+1:(nsidebands+1)*length(d.grid), 1] = b0; 
 
-        println("Calculating system matrix");
-        println(@sprintf("Number of sidebands (frequencies): %d (%d)", nsidebands, nfrequencies));
+        print_info("Calculating: system matrix");
+        print_info("Sidebands (freqs): $nsidebands ($nfrequencies)");
         
         As = Array{SparseMatrixCSC}(nfrequencies);
         Sxf = Array{SparseMatrixCSC}(d.sharedpml ? 1 : nfrequencies);
@@ -76,27 +76,27 @@ function solve(d::ModulatedDevice)
         Syf = Array{SparseMatrixCSC}(d.sharedpml ? 1 : nfrequencies);
         Syb = Array{SparseMatrixCSC}(d.sharedpml ? 1 : nfrequencies);
         if d.sharedpml
-            println("Using shared PML");
+            print_info("PML: shared");
             (Sxf[1], Sxb[1], Syf[1], Syb[1]) = S_create(d.grid, ω);
             A1 = Sxb[1]*δxb*1/μ₀*Sxf[1]*δxf + Syb[1]*δyb*1/μ₀*Syf[1]*δyf;
             for j = 1:nfrequencies
                 As[j] = A1 + ωn[j]^2*Tϵ;
             end
         else
-            println("Using frequency-by-frequency PML");
+            print_info("PML: per-frequency");
             for j = 1:nfrequencies
                 (Sxf[j], Sxb[j], Syf[j], Syb[j]) = S_create(d.grid, ωn[j]);
                 As[j] = Sxb[j]*δxb*1/μ₀*Sxf[j]*δxf + Syb[j]*δyb*1/μ₀*Syf[j]*δyf + ωn[j]^2*Tϵ;
             end
         end
         if nsidebands > 0
-            println("Calculating coupling matrix");
+            print_info("Calculating: coupling matrix");
             stencil_Cp = spdiagm([0.5*ωn[1:end-1].^2], [1], nfrequencies, nfrequencies);
             Cp = kron(stencil_Cp, conj(TΔϵ));
             stencil_Cm = spdiagm([0.5*ωn[2:end].^2],  [-1], nfrequencies, nfrequencies);
             Cm = kron(stencil_Cm, TΔϵ);
 
-            println("Calculating total matrix");
+            print_info("Calculating: total matrix");
             A = blkdiag(As...) + Cp + Cm;
         else
             A = As[1]; 
@@ -104,7 +104,7 @@ function solve(d::ModulatedDevice)
 
         ez = dolinearsolve(A, b, matrixtype=Pardiso.COMPLEX_NONSYM);
 
-        println("Extracting results");
+        print_info("Processing results");
 
         for j = 1:nfrequencies
             ezi = ez[(j-1)*length(d.grid)+1:j*length(d.grid)];

@@ -116,28 +116,24 @@ end
 
 function dolinearsolve(A::SparseMatrixCSC, b::Array; matrixtype=Pardiso.COMPLEX_NONSYM)
     tic();
-    println("Performing linear solve");
-    println(@sprintf("Problem unknowns: %.2E", length(b)));
+    print_info("Solving linear system");
+    print_info(@sprintf("Unknowns: %.2E", length(b)));
     pardiso_success = false;
     try
         ps = PardisoSolver();
         set_matrixtype!(ps, matrixtype);
         set_solver!(ps, Pardiso.DIRECT_SOLVER);
         pardisoinit(ps);
-        try
-            println("Solving with ", ENV["OMP_NUM_THREADS"], " threads");
-        catch
-            println("(!) Couldn't read OMP_NUM_THREADS");
-        end
+        try print_info("Threads:  ", ENV["OMP_NUM_THREADS"]) end
+        print_info("Solver: Pardiso");
         x = Pardiso.solve(ps, A, b);
         pardiso_success = true;
-    catch
-        println("(!) Pardiso solver has failed, falling back to lufact()");
     end
     if ~pardiso_success
+        print_info("Solver: built-in");
         x = lufact(A)\b;
     end
-    println(@sprintf("Time to solve: %.2f minutes", toq()/60));
+    print_info(@sprintf("Time: %.2f minutes", toq()/60));
     return x
 end
 
@@ -155,6 +151,18 @@ function unwrap(v, inplace=false)
     end
   end
   return unwrapped
+end
+
+function print_info(strs...)
+    msg = " "
+    for str in strs
+        msg = msg*str;
+    end
+    println(msg);
+end
+
+function print_warn(strs...)
+    print_info("\x1b[1m\x1b[31m(!)\x1b[0m ", strs...)
 end
 
 end

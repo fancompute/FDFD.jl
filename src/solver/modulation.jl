@@ -44,6 +44,7 @@ function solve(d::ModulatedDevice)
     fields = Array{FieldTM}(Nω, nfrequencies);
 
     for i in eachindex(d.ω)
+        print_info("======= Frequency: $i/$Nω =======");
         ω = d.ω[i];
         ωn = ω + Ω*n;
 

@@ -8,6 +8,7 @@ function solve(d::Device)
     fields = Array{FieldTM}(Nω);
 
     for i in eachindex(d.ω)
+        print_info("======= Frequency: $i/$Nω =======");
         ω = d.ω[i];
 
         length(d.modes) > 0 && ( d.src=zeros(Complex, size(d.grid)) ) # Only reset if we are using modes

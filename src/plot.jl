@@ -53,15 +53,15 @@ function plot_device(device::AbstractDevice; outline::Bool=false)
 	return ax
 end
 
-"    plot_device(ax::Array{<:PyObject}, device::AbstractDevice; outline::Bool=false, lc::String=\"k\")"
-function plot_device(axs::Array{<:PyObject}, device::AbstractDevice; outline::Bool=false, lc::String="k")
+"    plot_device(ax::Array{<:PyObject}, device::AbstractDevice; outline::Bool=false, lc::String=\"k\", lcm::String=\"k\")"
+function plot_device(axs::Array{<:PyObject}, device::AbstractDevice; outline::Bool=false, lc::String="k", lcm::String="k")
 	for i in eachindex(axs)
-		plot_device(axs[i], device, outline=outline, lc=lc);
+		plot_device(axs[i], device, outline=outline, lc=lc, lcm=lcm);
 	end
 end
 
-"    plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String=\"k\")"
-function plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String="k")
+"    plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String=\"k\", lcm::String=\"k\")"
+function plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String="k", lcm::String="k")
 	Z = real.(device.ϵᵣ)';
 
 	if outline
@@ -75,7 +75,7 @@ function plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, 
 
 	if isa(device, ModulatedDevice)
 		Z2 = abs.(device.Δϵᵣ)';
-		ax[:contour](xc(device.grid), yc(device.grid), Z2, levels=1, linewidths=0.7, colors="r");
+		ax[:contour](xc(device.grid), yc(device.grid), Z2, levels=1, linewidths=0.5, colors=lcm);
 	end
 	ax[:set_xlabel](L"$x$");
 	ax[:set_ylabel](L"$y$");

@@ -13,7 +13,13 @@ include("./solver/modulation.jl");
 include("./solver/nonlinear.jl");
 include("./plot.jl");
 
-export poynting, flux_surface, unwrap
+export poynting, flux_surface, unwrap, set_log_level!
+
+global log_level = 1;
+
+function set_log_level!(level::Int)
+    global log_level = level
+end
 
 """
     δ(w::Direction, s::DerivativeDirection, g::Grid)
@@ -154,11 +160,12 @@ function unwrap(v, inplace=false)
 end
 
 function print_info(strs...)
+    global log_level
     msg = " "
     for str in strs
-        msg = msg*str;
+        msg = msg*str
     end
-    println(msg);
+    log_level > 0 && println(msg)
 end
 
 function print_warn(strs...)

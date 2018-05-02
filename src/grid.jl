@@ -28,6 +28,7 @@ function Grid(dh::Number, Npml::AbstractArray{<:Integer}, xrange::AbstractArray{
     N = SVector{2}(Int.(round.(L/dh)));
     bounds1 = SVector{2}([Float(xrange[1]), Float(yrange[1])]);
     bounds2 = SVector{2}([Float(xrange[2]), Float(yrange[2])]);
+    print_info("Grid size: $N");
     return Grid(L, L₀, N, SVector{2}(Npml), (bounds1, bounds2));
 end
 

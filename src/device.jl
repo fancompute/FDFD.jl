@@ -1,5 +1,6 @@
 export AbstractDevice, Device, Mode
 export setup_ϵᵣ!, setup_src!, add_mode!
+export probe_field
 
 abstract type AbstractDevice{D} end
 
@@ -15,16 +16,17 @@ struct Mode
     width::Number
 end
 
-function add_mode!(d::AbstractDevice, mode::Mode)
-    append!(d.modes, [mode]);
-end
-
 mutable struct Device{D} <: AbstractDevice{D}
 	grid::Grid{D}
 	ϵᵣ::Array{Complex}
     src::Array{Complex}
     ω::AbstractVector{Float}
     modes::Array{Mode}
+end
+
+"    add_mode!(d::AbstractDevice, mode::Mode)"
+function add_mode!(d::AbstractDevice, mode::Mode)
+    append!(d.modes, [mode]);
 end
 
 "    Device(grid::Grid, ω::AbstractVector{Float})"

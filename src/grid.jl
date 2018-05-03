@@ -99,6 +99,7 @@ ye(g::Grid, i::CartesianIndex{2}) = ye(g)[i.I[2]];
 xe(g::Grid, i::Int64) = xe(g)[ ind2sub(size(g),i)[1] ];
 ye(g::Grid, i::Int64) = ye(g)[ ind2sub(size(g),i)[2] ];
 
+"    coord2ind(g::Grid{D}, xy::AbstractArray)"
 function coord2ind(g::Grid{D}, xy::AbstractArray) where {D}
     indx = x2ind(g, xy[1]);
     if D == 1
@@ -107,6 +108,7 @@ function coord2ind(g::Grid{D}, xy::AbstractArray) where {D}
     return (indx, y2ind(g, xy[2]))
 end
 
+"    x2ind(g::Grid, x::Real)"
 function x2ind(g::Grid, x::Real)
     ind = Int(round((x-g.bounds[1][1])/g.L[1]*size(g,1))+1);
     ind < 1 && return 1
@@ -114,9 +116,48 @@ function x2ind(g::Grid, x::Real)
     return ind
 end
 
+"    y2ind(g::Grid, y::Real)"
 function y2ind(g::Grid, y::Real)
     ind = Int(round((y-g.bounds[1][2])/g.L[2]*size(g,2))+1);
     ind < 1 && return 1
     ind > g.N[2] && return g.N[2] 
     return ind
+end
+
+"    δ(w::Direction, s::DerivativeDirection, g::Grid)"
+function δ(w::Direction, s::DerivativeDirection, g::Grid{K}) where {K}
+    if K == 2
+        (Nx, Ny) = size(g);
+    else 
+        Nx = size(g, 1);
+        Ny = 1;
+    end
+
+    if w == DirectionX
+        if s == Forward
+            δxf = 1/dx(g)*spdiagm([ones(Nx-1), -ones(Nx), 1], [1, 0, -Nx+1]);
+            return kron(speye(Ny), δxf)
+        else
+            δxb = 1/dx(g)*spdiagm([-ones(Nx-1), ones(Nx), -1], [-1, 0, Nx-1]);
+            return kron(speye(Ny), δxb)
+        end
+    end
+    if w == DirectionY
+        if s == Backward
+            δyf = 1/dy(g)*spdiagm([ones(Ny-1), -ones(Ny), 1], [1, 0, -Ny+1]);
+            return kron(δyf, speye(Nx))
+        else
+            δyb = 1/dy(g)*spdiagm([-ones(Ny-1), ones(Ny), -1], [-1, 0, Ny-1]);
+            return kron(δyb, speye(Nx))
+        end
+    end
+end
+
+
+"    grid_average(centerarray::AbstractArray, w::Direction)"
+function grid_average(centerarray::AbstractArray, w::Direction)
+    ndims(centerarray) == 1 && return (centerarray+circshift(centerarray, (1)))/2
+    w == DirectionX && return (centerarray+circshift(centerarray, (1, 0)))/2;
+    w == DirectionY && return (centerarray+circshift(centerarray, (0, 1)))/2;
+    return centerarray
 end

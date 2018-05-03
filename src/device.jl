@@ -117,20 +117,26 @@ end
 
 "    setup_mode!(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, srcxy::AbstractArray, srcnormal::Direction, srcwidth::Number)"
 function setup_mode!(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, srcxy::AbstractArray, srcnormal::Direction, srcwidth::Number)
-    (indx, indy) = coord2ind(d.grid, srcxy);
+    (_, vector, indx, indy) = get_modes(d, pol, ω, neff, 1, srcxy, srcnormal, srcwidth)
+    d.src[indx, indy] += abs.(vector);
+end
 
-    srcnormal == DirectionX && (srcpoints = Int(round(srcwidth/dy(d.grid))));
-    srcnormal == DirectionY && (srcpoints = Int(round(srcwidth/dx(d.grid))));
+"    get_modes(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, nmodes::Int, midxy::AbstractArray, slicenormal::Direction, slicewidth::Number)"
+function get_modes(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, nmodes::Int, midxy::AbstractArray, slicenormal::Direction, slicewidth::Number)
+    (indx, indy) = coord2ind(d.grid, midxy);
+
+    slicenormal == DirectionX && (srcpoints = Int(round(slicewidth/dy(d.grid))));
+    slicenormal == DirectionY && (srcpoints = Int(round(slicewidth/dx(d.grid))));
     srcpoints % 2 == 0 && (srcpoints += 1); # source points is odd
 
     M = Int((srcpoints-1)/2);
     srcpoints = 2*M+1;
 
-    if srcnormal == DirectionX
+    if slicenormal == DirectionX
         indx = indx;
         indy = indy+(-M:M);
         dh = dy(d.grid);
-    elseif srcnormal == DirectionY
+    elseif slicenormal == DirectionY
         indx = indx+(-M:M);
         indy = indy;
         dh = dx(d.grid);
@@ -139,6 +145,6 @@ function setup_mode!(d::AbstractDevice, pol::Polarization, ω::Float, neff::Numb
     g1D   = Grid(srcpoints, [0 srcpoints*dh], L₀=d.grid.L₀);
     dev1D = Device(g1D, ω);
     dev1D.ϵᵣ = d.ϵᵣ[indx, indy];
-    (β, vector) = solve(dev1D, pol, neff, 1);
-    d.src[indx, indy] += abs.(vector);
+    (β, vectors) = solve(dev1D, pol, neff, nmodes);
+    return (β, vectors, indx, indy)
 end

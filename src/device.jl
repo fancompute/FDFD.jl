@@ -118,7 +118,7 @@ end
 "    setup_mode!(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, srcxy::AbstractArray, srcnormal::Direction, srcwidth::Number)"
 function setup_mode!(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, srcxy::AbstractArray, srcnormal::Direction, srcwidth::Number)
     (_, vector, indx, indy) = get_modes(d, pol, ω, neff, 1, srcxy, srcnormal, srcwidth)
-    d.src[indx, indy] += abs.(vector);
+    d.src[indx, indy] += normalize(abs.(vector[:]));
 end
 
 "    get_modes(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, nmodes::Int, midxy::AbstractArray, slicenormal::Direction, slicewidth::Number)"

@@ -5,6 +5,17 @@ function probe_field(field::Field, xy::AbstractArray)
     isa(field, FieldTE) && return field.Hz[indx, indy]
 end
 
+"    probe_field(fields::Array{<:Field}, xy::AbstractArray)"
+function probe_field(fields::Array{<:Field}, xy::AbstractArray)
+    Nfields = length(fields);
+    probe = zeros(Complex, Nfields);
+    for i in eachindex(fields)
+        probe[i] = probe_field(fields[i], xy::AbstractArray);
+    end
+    return probe
+end
+
+
 "    scattering_parameters(fields::Array{<:Field}, d::AbstractDevice)"
 function scattering_parameters(fields::Array{<:Field}, d::AbstractDevice)
     @assert length(fields) == length(d.ω)

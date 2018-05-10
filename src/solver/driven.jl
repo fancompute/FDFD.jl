@@ -35,7 +35,7 @@ function solve(d::Device)
         A = δxf*μ₀^-1*δxb + δyf*μ₀^-1*δyb + ω^2*Tϵ;
         b = 1im*ω*d.src[:];
 
-        ez = dolinearsolve(A, b, matrixtype=Pardiso.COMPLEX_SYM)
+        ez = dolinearsolve(A, b, CSym)
 
         hx = -1/1im/ω/μ₀*δyb*ez;
         hy = 1/1im/ω/μ₀*δxb*ez;

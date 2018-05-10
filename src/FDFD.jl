@@ -1,6 +1,6 @@
 module FDFD
 
-using GeometryPrimitives, StaticArrays, Pardiso
+using GeometryPrimitives, StaticArrays
 
 include("./types.jl");
 include("./grid.jl");

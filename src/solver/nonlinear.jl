@@ -50,7 +50,7 @@ function solve(d::χ3Device, which_method::IterativeMethod)
     A = δxf*μ₀^-1*δxb + δyf*μ₀^-1*δyb + ω^2*Tϵ;
     b = 1im*ω*d.src[:];
     print_info("Solving linear system");
-    ez = dolinearsolve(A, b, matrixtype=Pardiso.COMPLEX_SYM);
+    ez = dolinearsolve(A, b, CNSym);
 
     coeff = ω^2*ϵ₀*3*d.χ[:]/d.grid.L₀;
 
@@ -74,7 +74,7 @@ function _doborn(ez, A, b, coeff; tol = 1e-12, maxiterations = 50)
     err = [1.0];
     while err[end] > tol && i <= maxiterations
         print_info(@sprintf("iteration number: %d", i));
-        ez_new = dolinearsolve(A + spdiagm(coeff.*ez.*conj.(ez)), b, matrixtype=Pardiso.COMPLEX_SYM);
+        ez_new = dolinearsolve(A + spdiagm(coeff.*ez.*conj.(ez)), b, CNSym);
         append!(err, norm(ez_new - ez)/norm(ez));
         
         ez = ez_new;
@@ -97,7 +97,7 @@ function _donewton(ez, A, b, coeff; tol = 1e-12, maxiterations = 50)
         J1  = A + spdiagm(2*coeff.*conj.(ez[1:M]).*ez[1:M]);
         J2 = spdiagm(coeff.*ez[1:M].*ez[1:M]);
         J = [J1 J2; conj.(J2) conj.(J1)];
-        δez = dolinearsolve(J, [F; conj.(F)], matrixtype=Pardiso.COMPLEX_NONSYM);
+        δez = dolinearsolve(J, [F; conj.(F)], CNSym);
         normez = norm(ez);
         ez = ez - δez;
         append!(err, norm(δez)/normez);

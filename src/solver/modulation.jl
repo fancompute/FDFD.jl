@@ -103,7 +103,7 @@ function solve(d::ModulatedDevice)
             A = As[1]; 
         end
 
-        ez = dolinearsolve(A, b, matrixtype=Pardiso.COMPLEX_NONSYM);
+        ez = dolinearsolve(A, b, CNSym);
 
         print_info("Processing results");
 

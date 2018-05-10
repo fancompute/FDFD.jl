@@ -13,3 +13,4 @@ const Tuple2   =  NTuple{2};
 @enum Direction DirectionX=1 DirectionY=2
 @enum DerivativeDirection Forward=1 Backward=2
 @enum Polarization TM=1 TE=2
+@enum FDFDMatSymmetry CSym=1 CNSym=2

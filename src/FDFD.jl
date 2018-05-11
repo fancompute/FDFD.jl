@@ -13,7 +13,6 @@ include("./solver/driven.jl");
 include("./solver/eigen.jl");
 include("./solver/modulation.jl");
 include("./solver/nonlinear.jl");
-include("./plot.jl");
 
 export poynting, flux_surface, unwrap, set_log_level!
 

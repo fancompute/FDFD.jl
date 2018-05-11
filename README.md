@@ -7,6 +7,8 @@ FDFD.jl is a 2D finite difference frequency domain (FDFD) code written completel
 ## Usage
 I will eventually develop better documentation for the package but for now, please see the included [Examples_FDFD_jl.ipyn](Examples_FDFD_jl.ipynb) Jupyter notebook to get started with some barebones examples.
 
+I've detached the plotting functions into a separate module [FDFDViz.jl](https://github.com/ianwilliamson/FDFDViz.jl) to remove the PyPlot requirement.
+
 ## TODO
 - [x] Add support for MUMPS solver and allow user to select between MUMPS, Pardiso, and the Julia \ command
 - [ ] Implement the frequency eigenvalue solver

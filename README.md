@@ -11,10 +11,16 @@ I've detached the plotting functions into a separate module [FDFDViz.jl](https:/
 
 ## TODO
 - [x] Add support for MUMPS solver and allow user to select between MUMPS, Pardiso, and the Julia \ command
-- [ ] Implement the frequency eigenvalue solver
+   - [ ] Determine why MUMPS will not parallelize
+- [x] Implement the frequency eigenvalue solver
 - [ ] Implement TE polarization
+   - [x] Add for eigenfrequency()
+   - [x] Add for solve()
+   - [ ] Add for modulated solve()
 - [ ] Investigate and develop a better data struct for storing the fields
-- [ ] Fix the inelegant (but currently functional) flux calculation
+- [ ] Stored grid values
+- [ ] Calculate S-parameters
+- [ ] Fix the hacked (but correct) flux calculation
 
 ## About
 The FDFD algorithm implemented here was originally developed by Jerry Shi and Wonseok Shin from Shanhui Fan's [research group](http://web.stanford.edu/group/fan/) at Stanford University. This code implements a version of the multi-frequency finite-difference frequency domain (MF-FDFD) method [1]. There are two MATLAB implementations of FDFD available which are likely to be more functional than this package. Note that there is also a work-in-progress FDFD Julia package being developed. See below for links to these projects.

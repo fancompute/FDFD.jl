@@ -1,11 +1,12 @@
 export solve
 
-"    solve(d::Device)"
-function solve(d::Device)
+"solve(d::Device, pol::Polarization)"
+function solve(d::Device, pol::Polarization=TM)
     (ϵ₀, μ₀, c₀) = normalize_parameters(d);
 
     Nω = length(d.ω);
-    fields = Array{FieldTM}(Nω);
+    pol == TM && ( fields = Array{FieldTM}(Nω) );
+    pol == TE && ( fields = Array{FieldTE}(Nω) );
 
     for i in eachindex(d.ω)
         print_info("======= Frequency: $i/$Nω =======");
@@ -18,10 +19,8 @@ function solve(d::Device)
         end
 
         Tϵ = spdiagm(ϵ₀*d.ϵᵣ[:]);
-
-        Hx = zeros(Complex128, size(d.grid));
-        Hy = zeros(Complex128, size(d.grid));
-        Ez = zeros(Complex128, size(d.grid));
+        Tϵxi = spdiagm(1./grid_average(ϵ₀*d.ϵᵣ, DirectionX)[:]);
+        Tϵyi = spdiagm(1./grid_average(ϵ₀*d.ϵᵣ, DirectionY)[:]);
 
         (Sxf, Sxb, Syf, Syb) = S_create(d.grid, ω);
 
@@ -31,15 +30,28 @@ function solve(d::Device)
         δyb = Syb*δ(DirectionY, Backward, d.grid);
         δyf = Syf*δ(DirectionY, Forward,  d.grid);
 
-        # Construct system matrix
-        A = δxf*μ₀^-1*δxb + δyf*μ₀^-1*δyb + ω^2*Tϵ;
-        b = 1im*ω*d.src[:];
+        if pol == TM
+            # Construct system matrix
+            A = δxf*μ₀^-1*δxb + δyf*μ₀^-1*δyb + ω^2*Tϵ;
+            b = 1im*ω*d.src[:];
 
-        ez = dolinearsolve(A, b, CSym)
+            ez = dolinearsolve(A, b, CSym)
 
-        hx = -1/1im/ω/μ₀*δyb*ez;
-        hy = 1/1im/ω/μ₀*δxb*ez;
-        fields[i] = FieldTM(d.grid, ez, hx, hy);
+            hx = -1/1im/ω/μ₀*δyb*ez;
+            hy = 1/1im/ω/μ₀*δxb*ez;
+            fields[i] = FieldTM(d.grid, ez, hx, hy);
+        elseif pol == TE
+            # Construct system matrix
+            A = δxf*Tϵxi*δxb + δyf*Tϵyi*δyb + ω^2*μ₀*speye(length(d.grid));
+            b = 1im*ω*d.src[:];
+
+            hz = dolinearsolve(A, b, CSym)
+
+            ex = 1/1im/ω*Tϵyi*δyb*hz; 
+            ey = 1/1im/ω*Tϵxi*(-δxb*hz); 
+
+            fields[i] = FieldTE(d.grid, hz, ex, ey);
+        end
     end
     
     Nω == 1 && return fields[1]

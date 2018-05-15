@@ -16,13 +16,11 @@ include("./solver/nonlinear.jl");
 
 export poynting, flux_surface, unwrap, set_log_level!
 
-global log_level = 1;
+global log_level = 1
 
-function set_log_level!(level::Int)
-    global log_level = level
-end
+set_log_level!(level::Int) = global log_level = level
 
-iscallable(f) = !isempty(methods(f));
+iscallable(f) = !isempty(methods(f))
 
 function unwrap(v, inplace=false)
   # currently assuming an array

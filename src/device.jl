@@ -54,10 +54,10 @@ function _compose_shapes!(pixels::AbstractArray, grid::Grid, shapes::AbstractVec
         y1 = ye(grid, i);
         x2 = xe(grid, i+1);
         y2 = ye(grid, i+1);
-        shape = findin([x,y], kd);
+        shape = findin([x, y, 0.0], kd);
         if ~isnull(shape)
-            r₀, nout = surfpt_nearby( [x,y], get(shape));
-            frac = volfrac((SVector(x1, y1), SVector(x2, y2)), nout, r₀);
+            r₀, nout = surfpt_nearby( [x,y, 0.0], get(shape));
+            frac = volfrac((SVector(x1, y1, 0.0), SVector(x2, y2, 0.0)), nout, r₀);
             data = get(shape).data;
             if iscallable(data)
                 pixels[i] = data(x, y);
@@ -145,6 +145,6 @@ function get_modes(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number
     g1D   = Grid(srcpoints, [0 srcpoints*dh], L₀=d.grid.L₀);
     dev1D = Device(g1D, ω);
     dev1D.ϵᵣ = d.ϵᵣ[indx, indy];
-    (β, vectors) = solve(dev1D, pol, neff, nmodes);
+    (β, vectors) = eigenmode(dev1D, pol, neff, nmodes);
     return (β, vectors, indx, indy)
 end

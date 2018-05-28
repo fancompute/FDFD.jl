@@ -16,30 +16,30 @@ function probe_field(fields::Array{<:Field}, xy::AbstractArray)
 end
 
 
-"    scattering_parameters(fields::Array{<:Field}, d::AbstractDevice)"
-function scattering_parameters(fields::Array{<:Field}, d::AbstractDevice)
-    @assert length(fields) == length(d.ω)
-    (ϵ₀, μ₀, c₀) = normalize_parameters(d)
-    S = zeros(Complex, length(d.ω), length(d.modes))
-    for i = 1:length(d.ω)
-        ω = d.ω[i];
-        for j = 1:length(d.modes)
-            mode = d.modes[j];
-            (β, Ej, indx, indy) = get_modes(d, mode.pol, ω, mode.neff, 1, mode.coor, mode.dir, mode.width)
-            Ec = fields[i].Ez[indx,indy] # computed field
-            Z = β/ω/ϵ₀
-
-            if j == 1
-                numer = (Ec-Ej).*conj.(Ej)
-            else
-                numer = Ec.*conj.(Ej)
-            end
-            denom = Ej.*conj.(Ej)
-            S[i, j] = sum(numer)/sum(denom)
-        end
-    end
-    return S
-end
+# "    scattering_parameters(fields::Array{<:Field}, d::AbstractDevice)"
+# function scattering_parameters(fields::Array{<:Field}, d::AbstractDevice)
+#     @assert length(fields) == length(d.ω)
+#     (ϵ₀, μ₀, c₀) = normalize_parameters(d)
+#     S = zeros(Complex, length(d.ω), length(d.modes))
+#     for i = 1:length(d.ω)
+#         ω = d.ω[i];
+#         for j = 1:length(d.modes)
+#             mode = d.modes[j];
+#             (β, Ej, indx, indy) = get_modes(d, mode.pol, ω, mode.neff, 1, mode.coor, mode.dir, mode.width)
+#             Ec = fields[i].Ez[indx,indy] # computed field
+#             Z = β/ω/ϵ₀
+#
+#             if j == 1
+#                 numer = (Ec-Ej).*conj.(Ej)
+#             else
+#                 numer = Ec.*conj.(Ej)
+#             end
+#             denom = Ej.*conj.(Ej)
+#             S[i, j] = sum(numer)/sum(denom)
+#         end
+#     end
+#     return S
+# end
 
 "    poynting_hacked(Ez_x, Ez_y, Hx, Hy)"
 function poynting_hacked(Ez_x, Ez_y, Hx, Hy)

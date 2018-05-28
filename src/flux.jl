@@ -15,7 +15,6 @@ function probe_field(fields::Array{<:Field}, xy::AbstractArray)
     return probe
 end
 
-
 # "    scattering_parameters(fields::Array{<:Field}, d::AbstractDevice)"
 # function scattering_parameters(fields::Array{<:Field}, d::AbstractDevice)
 #     @assert length(fields) == length(d.ω)
@@ -51,20 +50,19 @@ end
 "    poynting(field::Field)"
 function poynting(field::Field)
     if isa(field, FieldTM)
-        Ez_x = grid_average(field.Ez, x̂);
-        Ez_y = grid_average(field.Ez, ŷ);
-        Sx = -0.5*real.(Ez_x.*conj(field.Hy));
-        Sy =  0.5*real.(Ez_y.*conj(field.Hx));
-        return Flux2D(field.grid, Sx, Sy)
+        Ez_x = grid_average(field[:,:,:Ez], x̂);
+        Ez_y = grid_average(field[:,:,:Ez], ŷ);
+        Sx = -0.5*real.(Ez_x.*conj(field[:,:,:Hy]));
+        Sy =  0.5*real.(Ez_y.*conj(field[:,:,:Hx]));
+        return Flux2D(field.grid, field.ω, Sx, Sy)
     end
     if isa(field, FieldTE)
-        Hz_x = grid_average(field.Hz, x̂);
-        Hz_y = grid_average(field.Hz, ŷ);
-        Sx =  0.5*real.(field.Ey.*conj(field.Hz_x));
-        Sy = -0.5*real.(field.Ex.*conj(field.Hz_y));
-        return Flux2D(field.grid, Sx, Sy)
+        Hz_x = grid_average(field[:,:,:Hz], x̂);
+        Hz_y = grid_average(field[:,:,:Hz], ŷ);
+        Sx =  0.5*real.(field[:,:,:Ey].*conj(field.Hz_x));
+        Sy = -0.5*real.(field[:,:,:Ex].*conj(field.Hz_y));
+        return Flux2D(field.grid, field.ω, Sx, Sy)
     end
-    print_warn("poynting() detected neither a TM nor a TE field polarization");
 end
 
 "    flux_surface(fields::Array{<:Field}, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)"

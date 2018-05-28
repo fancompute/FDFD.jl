@@ -65,8 +65,8 @@ function solve(d::χ3Device, which_method::IterativeMethod)
 
     hx = -1/1im/ω/μ₀*δyb*ez;
     hy = 1/1im/ω/μ₀*δxb*ez;
-    
-    return (FieldTM(d.grid, ez, hx, hy), err)
+
+    return (FieldTM(d.grid, ω, ez, hx, hy), err)
 end
 
 function _doborn(ez, A, b, coeff; tol = 1e-12, maxiterations = 50)
@@ -76,7 +76,7 @@ function _doborn(ez, A, b, coeff; tol = 1e-12, maxiterations = 50)
         print_info(@sprintf("iteration number: %d", i));
         ez_new = dolinearsolve(A + spdiagm(coeff.*ez.*conj.(ez)), b, CNSym);
         append!(err, norm(ez_new - ez)/norm(ez));
-        
+
         ez = ez_new;
         i += 1;
 

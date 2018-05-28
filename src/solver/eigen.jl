@@ -45,15 +45,15 @@ function eigenfrequency(d::AbstractDevice, pol::Polarization, neigenvalues::Int;
         fields = Array{FieldTM}(neigenvalues);
 
         Tϵᵣ⁻¹ = spdiagm(1./d.ϵᵣ[:]);
-        A = Tϵᵣ⁻¹*δxf*δxb + Tϵᵣ⁻¹*δyf*δyb; 
+        A = Tϵᵣ⁻¹*δxf*δxb + Tϵᵣ⁻¹*δyf*δyb;
 
         (ω²μϵ, ez) = eigs(A, nev=neigenvalues, sigma=-ω₀^2*μ₀*ϵ₀, which=which);
         ω = sqrt.(-ω²μϵ/μ₀/ϵ₀);
 
         for i = 1:neigenvalues
-            hxi = -1/1im/ω[i]/μ₀*δyf*ez[:,i]; 
-            hyi = 1/1im/ω[i]/μ₀*δxf*ez[:,i]; 
-            fields[i] = FieldTM(d.grid, ez[:,i], hxi, hyi)
+            hxi = -1/1im/ω[i]/μ₀*δyf*ez[:,i];
+            hyi = 1/1im/ω[i]/μ₀*δxf*ez[:,i];
+            fields[i] = FieldTM(d.grid, ω[i], ez[:,i], hxi, hyi)
         end
 
         return (ω, fields)
@@ -63,15 +63,15 @@ function eigenfrequency(d::AbstractDevice, pol::Polarization, neigenvalues::Int;
 
         Tϵx⁻¹ = spdiagm(1./grid_average(ϵ₀*d.ϵᵣ, DirectionX)[:]);
         Tϵy⁻¹ = spdiagm(1./grid_average(ϵ₀*d.ϵᵣ, DirectionY)[:]);
-        A = δxf*Tϵx⁻¹*δxb + δyf*Tϵy⁻¹*δyb; 
+        A = δxf*Tϵx⁻¹*δxb + δyf*Tϵy⁻¹*δyb;
 
         (ω²μ, hz) = eigs(A, nev=neigenvalues, sigma=-ω₀^2*μ₀, which=which);
         ω = sqrt.(-ω²μ/μ₀);
 
         for i = 1:neigenvalues
-            exi = 1/1im/ω[i]*Tϵx⁻¹*δyb*hz[:,i]; 
-            eyi = 1/1im/ω[i]*Tϵy⁻¹*(-δxb*hz[:,i]); 
-            fields[i] = FieldTE(d.grid, hz[:,i], exi, eyi)
+            exi = 1/1im/ω[i]*Tϵx⁻¹*δyb*hz[:,i];
+            eyi = 1/1im/ω[i]*Tϵy⁻¹*(-δxb*hz[:,i]);
+            fields[i] = FieldTE(d.grid, ω[i], hz[:,i], exi, eyi)
         end
 
         return (ω, fields)

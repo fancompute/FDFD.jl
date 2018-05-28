@@ -38,7 +38,7 @@ function solve(d::ModulatedDevice)
     Nω = length(d.ω);
     nsidebands = d.nsidebands;
     nfrequencies = 2*nsidebands+1;
-    n = -nsidebands:1:nsidebands; 
+    n = -nsidebands:1:nsidebands;
     Ω = d.Ω;
 
     fields = Array{FieldTM}(Nω, nfrequencies);
@@ -65,12 +65,12 @@ function solve(d::ModulatedDevice)
 
         # Reshape Mz into a vector
         b0 = 1im*ω*d.src[:]; #TODO: check reshape vs [:]
-        b = zeros(Complex128, length(d.grid)*nfrequencies, 1); 
-        b[(nsidebands*length(d.grid))+1:(nsidebands+1)*length(d.grid), 1] = b0; 
+        b = zeros(Complex128, length(d.grid)*nfrequencies, 1);
+        b[(nsidebands*length(d.grid))+1:(nsidebands+1)*length(d.grid), 1] = b0;
 
         print_info("Calculating: system matrix");
         print_info("Sidebands (freqs): $nsidebands ($nfrequencies)");
-        
+
         As = Array{SparseMatrixCSC}(nfrequencies);
         Sxf = Array{SparseMatrixCSC}(d.sharedpml ? 1 : nfrequencies);
         Sxb = Array{SparseMatrixCSC}(d.sharedpml ? 1 : nfrequencies);
@@ -100,7 +100,7 @@ function solve(d::ModulatedDevice)
             print_info("Calculating: total matrix");
             A = blkdiag(As...) + Cp + Cm;
         else
-            A = As[1]; 
+            A = As[1];
         end
 
         ez = dolinearsolve(A, b, CNSym);
@@ -109,11 +109,11 @@ function solve(d::ModulatedDevice)
 
         for j = 1:nfrequencies
             ezi = ez[(j-1)*length(d.grid)+1:j*length(d.grid)];
-            hxi = -1/1im/ωn[j]/μ₀*Syf[d.sharedpml ? 1 : j]*δyf*ezi; 
-            hyi = 1/1im/ωn[j]/μ₀*Sxf[d.sharedpml ? 1 : j]*δxf*ezi; 
-            fields[i, j] = FieldTM(d.grid, ezi, hxi, hyi)
+            hxi = -1/1im/ωn[j]/μ₀*Syf[d.sharedpml ? 1 : j]*δyf*ezi;
+            hyi = 1/1im/ωn[j]/μ₀*Sxf[d.sharedpml ? 1 : j]*δxf*ezi;
+            fields[i, j] = FieldTM(d.grid, ωn[j], ezi, hxi, hyi)
         end
     end
-    
+
     return fields
 end

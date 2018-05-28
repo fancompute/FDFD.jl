@@ -39,7 +39,7 @@ function solve(d::Device, pol::Polarization=TM)
 
             hx = -1/1im/ω/μ₀*δyb*ez;
             hy = 1/1im/ω/μ₀*δxb*ez;
-            fields[i] = FieldTM(d.grid, ez, hx, hy);
+            fields[i] = FieldTM(d.grid, ω, ez, hx, hy);
         elseif pol == TE
             # Construct system matrix
             A = δxf*Tϵxi*δxb + δyf*Tϵyi*δyb + ω^2*μ₀*speye(length(d.grid));
@@ -47,13 +47,13 @@ function solve(d::Device, pol::Polarization=TM)
 
             hz = dolinearsolve(A, b, CSym)
 
-            ex = 1/1im/ω*Tϵyi*δyb*hz; 
-            ey = 1/1im/ω*Tϵxi*(-δxb*hz); 
+            ex = 1/1im/ω*Tϵyi*δyb*hz;
+            ey = 1/1im/ω*Tϵxi*(-δxb*hz);
 
-            fields[i] = FieldTE(d.grid, hz, ex, ey);
+            fields[i] = FieldTE(d.grid, ω, hz, ex, ey);
         end
     end
-    
+
     Nω == 1 && return fields[1]
     return fields
 end

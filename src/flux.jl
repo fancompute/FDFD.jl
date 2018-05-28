@@ -51,15 +51,15 @@ end
 "    poynting(field::Field)"
 function poynting(field::Field)
     if isa(field, FieldTM)
-        Ez_x = grid_average(field.Ez, DirectionX);
-        Ez_y = grid_average(field.Ez, DirectionY);
+        Ez_x = grid_average(field.Ez, x̂);
+        Ez_y = grid_average(field.Ez, ŷ);
         Sx = -0.5*real.(Ez_x.*conj(field.Hy));
         Sy =  0.5*real.(Ez_y.*conj(field.Hx));
         return Flux2D(field.grid, Sx, Sy)
     end
     if isa(field, FieldTE)
-        Hz_x = grid_average(field.Hz, DirectionX);
-        Hz_y = grid_average(field.Hz, DirectionY);
+        Hz_x = grid_average(field.Hz, x̂);
+        Hz_y = grid_average(field.Hz, ŷ);
         Sx =  0.5*real.(field.Ey.*conj(field.Hz_x));
         Sy = -0.5*real.(field.Ex.*conj(field.Hz_y));
         return Flux2D(field.grid, Sx, Sy)
@@ -80,7 +80,7 @@ end
 "    flux_surface(field::Field, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)"
 function flux_surface(field::Field, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)
     (x0, y0) = coord2ind(field.grid, ptmid);
-    if nrm == DirectionX
+    if nrm == x̂
         indx = x0-1:1:x0+1;
         if isinf(width)
             indy = 1:field.grid.N[2];
@@ -91,13 +91,13 @@ function flux_surface(field::Field, ptmid::AbstractArray{<:Real}, width::Real, n
         end
 
         Ez = view(field.Ez, indx, indy);
-        Ez_x = grid_average(Ez, DirectionX)
-        Ez_y = grid_average(Ez, DirectionY)
+        Ez_x = grid_average(Ez, x̂)
+        Ez_y = grid_average(Ez, ŷ)
         Hx = view(field.Hx, indx, indy);
         Hy = view(field.Hy, indx, indy);
         (Sx, Sy) = poynting_hacked(Ez_x, Ez_y, Hx, Hy)
         return sum(Sx[2,2:end-1])*dy(field.grid)
-    elseif nrm == DirectionY
+    elseif nrm == ŷ
         error("Not implemented yet...")
     end
 end
@@ -105,7 +105,7 @@ end
 "    flux_surface(flux::Flux2D, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)"
 function flux_surface(flux::Flux2D, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)
     (x0, y0) = coord2ind(flux.grid, ptmid);
-    if nrm == DirectionX
+    if nrm == x̂
         indx = x0;
         if isinf(width)
             indy = 1:flux.grid.N[2];
@@ -115,7 +115,7 @@ function flux_surface(flux::Flux2D, ptmid::AbstractArray{<:Real}, width::Real, n
             indy = y1:1:y2;
         end
         return sum(flux.Sx[indx,indy])*dy(flux.grid)
-    elseif nrm == DirectionY
+    elseif nrm == ŷ
         error("Not implemented yet...")
     end
 end

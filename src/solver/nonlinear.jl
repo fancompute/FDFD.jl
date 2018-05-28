@@ -42,10 +42,10 @@ function solve(d::χ3Device, which_method::IterativeMethod)
     (Sxf, Sxb, Syf, Syb) = S_create(d.grid, ω);
 
     # Construct derivates
-    δxb = Sxb*δ(DirectionX, Backward, d.grid);
-    δxf = Sxf*δ(DirectionX, Forward,  d.grid);
-    δyb = Syb*δ(DirectionY, Backward, d.grid);
-    δyf = Syf*δ(DirectionY, Forward,  d.grid);
+    δxb = Sxb*δ(x̂, Backward, d.grid);
+    δxf = Sxf*δ(x̂, Forward,  d.grid);
+    δyb = Syb*δ(ŷ, Backward, d.grid);
+    δyf = Syf*δ(ŷ, Forward,  d.grid);
 
     A = δxf*μ₀^-1*δxb + δyf*μ₀^-1*δyb + ω^2*Tϵ;
     b = 1im*ω*d.src[:];

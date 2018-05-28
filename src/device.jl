@@ -56,7 +56,7 @@ function _compose_shapes!(pixels::AbstractArray, grid::Grid, shapes::AbstractVec
         y2 = ye(grid, i+1);
         shape = findin([x, y, 0.0], kd);
         if ~isnull(shape)
-            r₀, nout = surfpt_nearby( [x,y, 0.0], get(shape));
+            r₀, nout = surfpt_nearby( [x, y, 0.0], get(shape));
             frac = volfrac((SVector(x1, y1, 0.0), SVector(x2, y2, 0.0)), nout, r₀);
             data = get(shape).data;
             if iscallable(data)
@@ -100,17 +100,17 @@ setup_ϵᵣ!(d::AbstractDevice, region, value) = _mask_values!(d.ϵᵣ, d.grid, 
 setup_src!(d::AbstractDevice, region, value) = _mask_values!(d.src, d.grid, region, value)
 
 "    setup_src!(d::AbstractDevice, xy::AbstractArray)"
-function setup_src!(d::AbstractDevice, xy::AbstractArray) 
+function setup_src!(d::AbstractDevice, xy::AbstractArray)
     (indx, indy) = coord2ind(d.grid, xy);
     d.src[indx, indy] = 1im;
 end
 
 "    setup_src!(d::AbstractDevice, xy::AbstractArray, srcnormal::Direction)"
-function setup_src!(d::AbstractDevice, xy::AbstractArray, srcnormal::Direction) 
+function setup_src!(d::AbstractDevice, xy::AbstractArray, srcnormal::Direction)
     (indx, indy) = coord2ind(d.grid, xy);
-    if srcnormal == DirectionX
+    if srcnormal == x̂
         d.src[indx, :] = 1im;
-    elseif srcnormal == DirectionY
+    elseif srcnormal == ŷ
         d.src[:, indy] = 1im;
     end
 end
@@ -125,18 +125,18 @@ end
 function get_modes(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, nmodes::Int, midxy::AbstractArray, slicenormal::Direction, slicewidth::Number)
     (indx, indy) = coord2ind(d.grid, midxy);
 
-    slicenormal == DirectionX && (srcpoints = Int(round(slicewidth/dy(d.grid))));
-    slicenormal == DirectionY && (srcpoints = Int(round(slicewidth/dx(d.grid))));
+    slicenormal == x̂ && (srcpoints = Int(round(slicewidth/dy(d.grid))));
+    slicenormal == ŷ && (srcpoints = Int(round(slicewidth/dx(d.grid))));
     srcpoints % 2 == 0 && (srcpoints += 1); # source points is odd
 
     M = Int((srcpoints-1)/2);
     srcpoints = 2*M+1;
 
-    if slicenormal == DirectionX
+    if slicenormal == x̂
         indx = indx;
         indy = indy+(-M:M);
         dh = dy(d.grid);
-    elseif slicenormal == DirectionY
+    elseif slicenormal == ŷ
         indx = indx+(-M:M);
         indy = indy;
         dh = dx(d.grid);

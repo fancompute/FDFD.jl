@@ -1,6 +1,6 @@
 export ϵ₀, μ₀, c₀, η₀
 export Polarization, TM, TE
-export Direction, DirectionX, DirectionY
+export Direction, x̂, ŷ, ẑ
 
 const ϵ₀ = 8.85418782e-12;
 const μ₀ = 1.25663706e-6;
@@ -10,7 +10,7 @@ const η₀ = sqrt(μ₀/ϵ₀);
 const Float    =  Float64;
 const Tuple2   =  NTuple{2};
 
-@enum Direction DirectionX=1 DirectionY=2
+@enum Direction x̂=1 ŷ=2 ẑ=3
 @enum DerivativeDirection Forward=1 Backward=2
 @enum Polarization TM=1 TE=2
 @enum FDFDMatSymmetry CSym=1 CNSym=2

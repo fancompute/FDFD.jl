@@ -6,10 +6,10 @@ function eigenmode(d::AbstractDevice, pol::Polarization, neff::Number, neigenval
     ω = d.ω[1];
     if ndims(d.grid) == 1
         Tϵ = spdiagm(ϵ₀*d.ϵᵣ[:]);
-        Tϵxinv = spdiagm((ϵ₀*grid_average(d.ϵᵣ, DirectionX)[:]).^-1);
+        Tϵxinv = spdiagm((ϵ₀*grid_average(d.ϵᵣ, x̂)[:]).^-1);
 
-        δxb = δ(DirectionX, Backward, d.grid);
-        δxf = δ(DirectionX, Forward,  d.grid);
+        δxb = δ(x̂, Backward, d.grid);
+        δxf = δ(x̂, Forward,  d.grid);
 
         if pol == TM
             A = ω^2*μ₀*Tϵ + δxf*δxb;
@@ -36,10 +36,10 @@ function eigenfrequency(d::AbstractDevice, pol::Polarization, neigenvalues::Int;
 
     (Sxf, Sxb, Syf, Syb) = S_create(d.grid, ω₀);
 
-    δxb = Sxb*δ(DirectionX, Backward, d.grid);
-    δxf = Sxf*δ(DirectionX, Forward,  d.grid);
-    δyb = Syb*δ(DirectionY, Backward, d.grid);
-    δyf = Syf*δ(DirectionY, Forward,  d.grid);
+    δxb = Sxb*δ(x̂, Backward, d.grid);
+    δxf = Sxf*δ(x̂, Forward,  d.grid);
+    δyb = Syb*δ(ŷ, Backward, d.grid);
+    δyf = Syf*δ(ŷ, Forward,  d.grid);
 
     if pol == TM
         fields = Array{FieldTM}(neigenvalues);
@@ -61,8 +61,8 @@ function eigenfrequency(d::AbstractDevice, pol::Polarization, neigenvalues::Int;
     if pol == TE
         fields = Array{FieldTE}(neigenvalues);
 
-        Tϵx⁻¹ = spdiagm(1./grid_average(ϵ₀*d.ϵᵣ, DirectionX)[:]);
-        Tϵy⁻¹ = spdiagm(1./grid_average(ϵ₀*d.ϵᵣ, DirectionY)[:]);
+        Tϵx⁻¹ = spdiagm(1./grid_average(ϵ₀*d.ϵᵣ, x̂)[:]);
+        Tϵy⁻¹ = spdiagm(1./grid_average(ϵ₀*d.ϵᵣ, ŷ)[:]);
         A = δxf*Tϵx⁻¹*δxb + δyf*Tϵy⁻¹*δyb;
 
         (ω²μ, hz) = eigs(A, nev=neigenvalues, sigma=-ω₀^2*μ₀, which=which);

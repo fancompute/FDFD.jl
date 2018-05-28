@@ -15,7 +15,7 @@ function dolinearsolve(A::SparseMatrixCSC, b::Array, matrixsym::FDFDMatSymmetry)
     matrixsym == CNSym ? sym = Pardiso.COMPLEX_NONSYM : sym = Pardiso.COMPLEX_SYM
     set_matrixtype!(ps, sym)
         #set_solver!(ps, Pardiso.DIRECT_SOLVER)
-    
+
     A_pardiso = get_matrix(ps, A, :N)
 
     set_phase!(ps, Pardiso.ANALYSIS)

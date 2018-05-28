@@ -19,16 +19,16 @@ function solve(d::Device, pol::Polarization=TM)
         end
 
         Tϵ = spdiagm(ϵ₀*d.ϵᵣ[:]);
-        Tϵxi = spdiagm(1./grid_average(ϵ₀*d.ϵᵣ, DirectionX)[:]);
-        Tϵyi = spdiagm(1./grid_average(ϵ₀*d.ϵᵣ, DirectionY)[:]);
+        Tϵxi = spdiagm(1./grid_average(ϵ₀*d.ϵᵣ, x̂)[:]);
+        Tϵyi = spdiagm(1./grid_average(ϵ₀*d.ϵᵣ, ŷ)[:]);
 
         (Sxf, Sxb, Syf, Syb) = S_create(d.grid, ω);
 
         # Construct derivates
-        δxb = Sxb*δ(DirectionX, Backward, d.grid);
-        δxf = Sxf*δ(DirectionX, Forward,  d.grid);
-        δyb = Syb*δ(DirectionY, Backward, d.grid);
-        δyf = Syf*δ(DirectionY, Forward,  d.grid);
+        δxb = Sxb*δ(x̂, Backward, d.grid);
+        δxf = Sxf*δ(x̂, Forward,  d.grid);
+        δyb = Syb*δ(ŷ, Backward, d.grid);
+        δyf = Syf*δ(ŷ, Forward,  d.grid);
 
         if pol == TM
             # Construct system matrix

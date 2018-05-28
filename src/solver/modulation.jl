@@ -58,10 +58,10 @@ function solve(d::ModulatedDevice)
         TΔϵ = spdiagm(ϵ₀*d.Δϵᵣ[:]); #TODO: check reshape vs [:]
 
         # Construct derivates
-        δxb = δ(DirectionX, Backward, d.grid);
-        δxf = δ(DirectionX, Forward,  d.grid);
-        δyb = δ(DirectionY, Backward, d.grid);
-        δyf = δ(DirectionY, Forward,  d.grid);
+        δxb = δ(x̂, Backward, d.grid);
+        δxf = δ(x̂, Forward,  d.grid);
+        δyb = δ(ŷ, Backward, d.grid);
+        δyf = δ(ŷ, Forward,  d.grid);
 
         # Reshape Mz into a vector
         b0 = 1im*ω*d.src[:]; #TODO: check reshape vs [:]

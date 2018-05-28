@@ -1,16 +1,17 @@
-"    probe_field(field::Field, xy::AbstractArray)"
-function probe_field(field::Field, xy::AbstractArray)
+"     probe_field(field::Field, component::Symbol, xy::AbstractArray)"
+function probe_field(field::Field, component::Symbol, xy::AbstractArray)
     (indx, indy) = coord2ind(field.grid, xy)
-    isa(field, FieldTM) && return field.Ez[indx, indy]
-    isa(field, FieldTE) && return field.Hz[indx, indy]
+    isa(field, FieldTM) && ~in(component, [:Ez, :Hx, :Hy]) && error("$component is invalid for the TM polarization. Valid options are :Ez, :Hx, :Hy")
+    isa(field, FieldTE) && ~in(component, [:Hz, :Ex, :Ey]) && error("$component is invalid for the TE polarization. Valid options are :Hz, :Ex, :Ey")
+    return field[indx, indy, component]
 end
 
-"    probe_field(fields::Array{<:Field}, xy::AbstractArray)"
-function probe_field(fields::Array{<:Field}, xy::AbstractArray)
+"    probe_field(fields::Array{<:Field}, component::Symbol, xy::AbstractArray)"
+function probe_field(fields::Array{<:Field}, component::Symbol, xy::AbstractArray)
     Nfields = length(fields);
     probe = zeros(Complex, Nfields);
     for i in eachindex(fields)
-        probe[i] = probe_field(fields[i], xy::AbstractArray);
+        probe[i] = probe_field(fields[i], component, xy);
     end
     return probe
 end

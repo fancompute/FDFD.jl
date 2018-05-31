@@ -143,7 +143,7 @@ function δ(w::Direction, s::DerivativeDirection, g::Grid{K}) where {K}
         end
     end
     if w == ŷ
-        if s == Backward
+        if s == Forward
             δyf = 1/dy(g)*spdiagm([ones(Ny-1), -ones(Ny), 1], [1, 0, -Ny+1]);
             return kron(δyf, speye(Nx))
         else
@@ -152,7 +152,6 @@ function δ(w::Direction, s::DerivativeDirection, g::Grid{K}) where {K}
         end
     end
 end
-
 
 "    grid_average(centerarray::AbstractArray, w::Direction)"
 function grid_average(centerarray::AbstractArray, w::Direction)

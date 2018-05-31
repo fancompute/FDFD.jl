@@ -19,8 +19,7 @@ I've detached the plotting functions into a separate module [FDFDViz.jl](https:/
    - [ ] Add for modulated solve()
 - [x] Investigate and develop a better data struct for storing the fields
    - [x] FieldTM and FieldTE
-   - [ ] Flux2D
-   - [ ] Fix the hacked (but correct) flux calculation based on new datastructure
+   - [x] Cleaned up Flux calculation
 - [ ] Stored grid values
 - [ ] Calculate S-parameters
 - [ ] GeometryPrimitives 2D vs 3D shape handling

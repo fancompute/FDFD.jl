@@ -6,7 +6,7 @@ const AxisY = Axis{:y}
 const AxisComponent = Axis{:component, Array{Symbol,1}}
 
 abstract type Result{T,N} <: AbstractArray{T,N} end
-abstract type Field{N} <: Result{Complex,N} end
+abstract type Field{T,N} <: Result{T,N} end
 
 Base.size(A::Result) = size(A.data)
 Base.IndexStyle(A::Result) = IndexStyle(A.data)
@@ -15,6 +15,26 @@ AxisArrays.axisdim(A::Result, ax) = axisdim(A.data, ax)
 AxisArrays.axes(A::Result, i...) = axes(A.data, i...)
 AxisArrays.axisnames(A::Result) = axisnames(A.data)
 AxisArrays.axisvalues(A::Result) = axisvalues(A.data)
+
+# function Base.similar(x::Result, ::Type{S}, dims::NTuple{N,Int}) where {S,N}
+#     if size(x) == dims
+#         data = similar(AxisArray(x),S)
+#         similar_helper(x,data,x.params)
+#     else
+#         similar(AxisArray(x),S,dims)
+#     end
+# end
+#
+# Base.similar(x::Result, ax1::Axis, axs::Axis...) = similar(x, eltype(x), ax1, axs...)
+#
+# function Base.similar(x::Result, ::Type{S}, ax1::Axis, axs::Axis...) where S
+#     if ndims(x) == 1+length(axs)
+#         data = similar(AxisArray(x), ax1, axs...)
+#         similar_helper(x, data, x.params)
+#     else
+#         similar(AxisArray(x), S, ax1, axs...)
+#     end
+# end
 
 @inline @Base.propagate_inbounds Base.getindex(A::Result, i...) =
   getindex(A.data, i...)
@@ -27,7 +47,7 @@ AxisArrays.axisvalues(A::Result) = axisvalues(A.data)
 
 # ============================================================================ #
 
-struct FieldTM <: Field{3}
+struct FieldTM <: Field{Complex,3}
     grid::Grid{2}
     ω::Complex
     data::AxisArray
@@ -42,7 +62,7 @@ function FieldTM(grid::Grid{2}, ω::Number, Ez::Array{<:Complex,1}, Hx::Array{<:
     return FieldTM(grid, ω, cat(3, reshape(Ez, sz), reshape(Hx, sz), reshape(Hy, sz)))
 end
 
-struct FieldTE <: Field{3}
+struct FieldTE <: Field{Complex,3}
     grid::Grid{2}
     ω::Complex
     data::AxisArray
@@ -59,18 +79,18 @@ end
 
 # ============================================================================ #
 
-struct Flux2D <: Field{2}
+struct Flux <: Field{Float,3}
     grid::Grid{2}
     ω::Complex
     data::AxisArray
 end
 
-function Flux2D(grid::Grid{2}, ω::Number, data::Array{<:Real,3})
-    return Flux2D(grid, Complex(ω), AxisArray(data, AxisX(xc(grid)), AxisY(yc(grid)), AxisComponent([:Sx, :Sy])))
+function Flux(grid::Grid{2}, ω::Number, data::Array{Float,3})
+    return Flux(grid, Complex(ω), AxisArray(data, AxisX(xc(grid)), AxisY(yc(grid)), AxisComponent([:Sx, :Sy])))
 end
 
-function Flux2D(grid::Grid{2}, ω::Number, Sx::Array{<:Real,2}, Sy::Array{<:Real,2})
-    return Flux2D(grid, ω, cat(3, Sx, Sy))
+function Flux(grid::Grid{2}, ω::Number, Sx::Array{Float,2}, Sy::Array{Float,2})
+    return Flux(grid, ω, cat(3, Sx, Sy))
 end
 
 # poynt = poynting(field_dipole);

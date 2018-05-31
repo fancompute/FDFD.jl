@@ -1,6 +1,6 @@
 module FDFD
 
-using GeometryPrimitives, StaticArrays, AxisArrays
+using GeometryPrimitives, StaticArrays, AxisArrays, IntervalSets
 
 include("./types.jl");
 include("./grid.jl");

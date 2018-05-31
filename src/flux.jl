@@ -1,3 +1,7 @@
+using AxisArrays, IntervalSets
+
+export probe_field, poynting, flux_surface_integral
+
 "     probe_field(field::Field, component::Symbol, xy::AbstractArray)"
 function probe_field(field::Field, component::Symbol, xy::AbstractArray)
     (indx, indy) = coord2ind(field.grid, xy)
@@ -6,14 +10,54 @@ function probe_field(field::Field, component::Symbol, xy::AbstractArray)
     return field[indx, indy, component]
 end
 
-"    probe_field(fields::Array{<:Field}, component::Symbol, xy::AbstractArray)"
-function probe_field(fields::Array{<:Field}, component::Symbol, xy::AbstractArray)
-    Nfields = length(fields);
-    probe = zeros(Complex, Nfields);
-    for i in eachindex(fields)
-        probe[i] = probe_field(fields[i], component, xy);
+"    poynting(field::Field)"
+function poynting(field::Field)
+    if isa(field, FieldTM)
+        Ez_x = grid_average(field[:, :, :Ez], x̂);
+        Ez_y = grid_average(field[:, :, :Ez], ŷ);
+        Sx = -0.5*real.(Ez_x.*conj(field[:, :, :Hy]));
+        Sy =  0.5*real.(Ez_y.*conj(field[:, :, :Hx]));
+        return Flux(field.grid, field.ω, Sx, Sy)
     end
-    return probe
+    if isa(field, FieldTE)
+        Hz_x = grid_average(field[:, :, :Hz], x̂);
+        Hz_y = grid_average(field[:, :, :Hz], ŷ);
+        Sx =  0.5*real.(field[:, :, :Ey].*conj(field.Hz_x));
+        Sy = -0.5*real.(field[:, :, :Ex].*conj(field.Hz_y));
+        return Flux(field.grid, field.ω, Sx, Sy)
+    end
+end
+
+"    flux_surface_integral(field::Field, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)"
+function flux_surface_integral(field::Field, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)
+    if nrm == x̂
+        if isa(field, FieldTM)
+            xind = AxisArrays.axisindexes(axes(field)[XX], atvalue(ptmid[XX], atol=dx(field.grid)/2))
+            yint = (ptmid[YY]-width)..(ptmid[YY]+width)
+            yind = AxisArrays.axisindexes(axes(field)[YY], yint)
+            Ez   = view(field.data, xind:xind+1, yind, :Ez)
+            Ez_x̂ = grid_average(Ez, x̂)[1,:]
+            Hy   = view(field.data, xind, yind, :Hy);
+            return sum(-0.5*real.(Ez_x̂.*conj(Hy)))*dy(field.grid)
+        end
+        if isa(field, FieldTE)
+            xind = AxisArrays.axisindexes(axes(field)[XX], atvalue(ptmid[XX], atol=dx(field.grid)/2))
+            yint = (ptmid[YY]-width)..(ptmid[YY]+width)
+            yind = AxisArrays.axisindexes(axes(field)[YY], yint)
+            Hz   = view(field.data, xind:xind+1, yind, :Hz)
+            Hz_x̂ = grid_average(Hz, x̂)[1,:]
+            Ey   = view(field.data, xind, yind, :Hy);
+            return sum(-0.5*real.(Ey.*conj(Hz_x̂)))*dy(field.grid)
+        end
+    end
+    if nrm == ŷ
+        if isa(field, FieldTM)
+            error("ŷ normal TM calculation not yet implemented")
+        end
+        if isa(field, FieldTE)
+            error("ŷ normal TE calculation not yet implemented")
+        end
+    end
 end
 
 # "    scattering_parameters(fields::Array{<:Field}, d::AbstractDevice)"
@@ -40,81 +84,3 @@ end
 #     end
 #     return S
 # end
-
-"    poynting_hacked(Ez_x, Ez_y, Hx, Hy)"
-function poynting_hacked(Ez_x, Ez_y, Hx, Hy)
-    Sx = -0.5*real.(Ez_x.*conj(Hy));
-    Sy =  0.5*real.(Ez_y.*conj(Hx));
-    return (Sx, Sy)
-end
-
-"    poynting(field::Field)"
-function poynting(field::Field)
-    if isa(field, FieldTM)
-        Ez_x = grid_average(field[:,:,:Ez], x̂);
-        Ez_y = grid_average(field[:,:,:Ez], ŷ);
-        Sx = -0.5*real.(Ez_x.*conj(field[:,:,:Hy]));
-        Sy =  0.5*real.(Ez_y.*conj(field[:,:,:Hx]));
-        return Flux2D(field.grid, field.ω, Sx, Sy)
-    end
-    if isa(field, FieldTE)
-        Hz_x = grid_average(field[:,:,:Hz], x̂);
-        Hz_y = grid_average(field[:,:,:Hz], ŷ);
-        Sx =  0.5*real.(field[:,:,:Ey].*conj(field.Hz_x));
-        Sy = -0.5*real.(field[:,:,:Ex].*conj(field.Hz_y));
-        return Flux2D(field.grid, field.ω, Sx, Sy)
-    end
-end
-
-"    flux_surface(fields::Array{<:Field}, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)"
-function flux_surface(fields::Array{<:Field}, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)
-    Nfields = length(fields);
-    P = zeros(Float, Nfields);
-    for i in eachindex(fields)
-        P[i] = flux_surface(fields[i], ptmid, width, nrm);
-    end
-    return P
-end
-
-"    flux_surface(field::Field, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)"
-function flux_surface(field::Field, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)
-    (x0, y0) = coord2ind(field.grid, ptmid);
-    if nrm == x̂
-        indx = x0-1:1:x0+1;
-        if isinf(width)
-            indy = 1:field.grid.N[2];
-        else
-            y1 = y2ind(field.grid,ptmid[2]-width/2);
-            y2 = y2ind(field.grid,ptmid[2]+width/2);
-            indy = y1-1:1:y2+1;
-        end
-
-        Ez = view(field.Ez, indx, indy);
-        Ez_x = grid_average(Ez, x̂)
-        Ez_y = grid_average(Ez, ŷ)
-        Hx = view(field.Hx, indx, indy);
-        Hy = view(field.Hy, indx, indy);
-        (Sx, Sy) = poynting_hacked(Ez_x, Ez_y, Hx, Hy)
-        return sum(Sx[2,2:end-1])*dy(field.grid)
-    elseif nrm == ŷ
-        error("Not implemented yet...")
-    end
-end
-
-"    flux_surface(flux::Flux2D, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)"
-function flux_surface(flux::Flux2D, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)
-    (x0, y0) = coord2ind(flux.grid, ptmid);
-    if nrm == x̂
-        indx = x0;
-        if isinf(width)
-            indy = 1:flux.grid.N[2];
-        else
-            y1 = y2ind(flux.grid,ptmid[2]-width/2);
-            y2 = y2ind(flux.grid,ptmid[2]+width/2);
-            indy = y1:1:y2;
-        end
-        return sum(flux.Sx[indx,indy])*dy(flux.grid)
-    elseif nrm == ŷ
-        error("Not implemented yet...")
-    end
-end

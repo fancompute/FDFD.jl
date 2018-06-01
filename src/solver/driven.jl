@@ -15,7 +15,7 @@ function solve(d::Device, pol::Polarization=TM)
         length(d.modes) > 0 && ( d.src=zeros(Complex, size(d.grid)) ) # Only reset if we are using modes
         for mode in d.modes
             # TODO: handle the polarization here
-            setup_mode!(d, TM, ω, mode.neff, mode.coor, mode.dir, mode.width);
+            setup_mode!(d, TM, ω, mode.neff, mode.pt, mode.dir, mode.width);
         end
 
         Tϵ = spdiagm(ϵ₀*d.ϵᵣ[:]);

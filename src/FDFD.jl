@@ -14,7 +14,7 @@ include("./solver/eigen.jl");
 include("./solver/modulation.jl");
 include("./solver/nonlinear.jl");
 
-export poynting, flux_surface, unwrap, set_log_level!
+export unwrap, set_log_level!
 
 global log_level = 1
 

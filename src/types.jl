@@ -1,6 +1,7 @@
 export ϵ₀, μ₀, c₀, η₀
 export Polarization, TM, TE
 export Direction, x̂, ŷ, ẑ
+export Point
 
 const ϵ₀ = 8.85418782e-12;
 const μ₀ = 1.25663706e-6;
@@ -18,3 +19,8 @@ const ZZ = 3
 @enum DerivativeDirection Forward=1 Backward=2
 @enum Polarization TM=1 TE=2
 @enum FDFDMatSymmetry CSym=1 CNSym=2
+
+struct Point <: FieldVector{2, Float64}
+    x::Float64
+    y::Float64
+end

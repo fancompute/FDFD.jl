@@ -1,6 +1,14 @@
-export AbstractDevice, Device, Mode
-export setup_ϵᵣ!, setup_src!, add_mode!
-export probe_field
+export AbstractDevice, Device
+export setup_ϵᵣ!, setup_src!
+export Mode, add_mode!
+
+struct Mode
+    pol::Polarization
+    dir::Direction
+    neff::Number
+    pt::Point
+    width::Number
+end
 
 abstract type AbstractDevice{D} end
 
@@ -8,25 +16,12 @@ Base.size(d::AbstractDevice) = size(d.grid);
 Base.size(d::AbstractDevice, i::Int) = size(d.grid, i);
 Base.length(d::AbstractDevice) = length(d.grid);
 
-struct Mode
-    pol::Polarization
-    dir::Direction
-    neff::Number
-    coor::AbstractArray
-    width::Number
-end
-
 mutable struct Device{D} <: AbstractDevice{D}
 	grid::Grid{D}
 	ϵᵣ::Array{Complex}
     src::Array{Complex}
     ω::AbstractVector{Float}
     modes::Array{Mode}
-end
-
-"    add_mode!(d::AbstractDevice, mode::Mode)"
-function add_mode!(d::AbstractDevice, mode::Mode)
-    append!(d.modes, [mode]);
 end
 
 "    Device(grid::Grid, ω::AbstractVector{Float})"
@@ -39,11 +34,15 @@ end
 "    Device(grid::Grid, ω::Float)"
 Device(grid::Grid, ω::Float) = Device(grid, [ω]);
 
+# ============================================================================ #
+
 "    normalize_parameters(g::Grid)"
 normalize_parameters(g::Grid) = (ϵ₀*g.L₀, μ₀*g.L₀, c₀/g.L₀);
 
 "    normalize_parameters(d::AbstractDevice)"
 normalize_parameters(d::AbstractDevice) = normalize_parameters(d.grid);
+
+# ============================================================================ #
 
 function _compose_shapes!(pixels::AbstractArray, grid::Grid, shapes::AbstractVector{<:Shape})
     kd = KDTree(shapes);
@@ -99,15 +98,15 @@ setup_ϵᵣ!(d::AbstractDevice, region, value) = _mask_values!(d.ϵᵣ, d.grid, 
 "    setup_src!(d::AbstractDevice, region, value)"
 setup_src!(d::AbstractDevice, region, value) = _mask_values!(d.src, d.grid, region, value)
 
-"    setup_src!(d::AbstractDevice, xy::AbstractArray)"
-function setup_src!(d::AbstractDevice, xy::AbstractArray)
-    (indx, indy) = coord2ind(d.grid, xy);
+"    setup_src!(d::AbstractDevice, pt::Point)"
+function setup_src!(d::AbstractDevice, pt::Point)
+    (indx, indy) = coord2ind(d.grid, pt);
     d.src[indx, indy] = 1im;
 end
 
-"    setup_src!(d::AbstractDevice, xy::AbstractArray, srcnormal::Direction)"
-function setup_src!(d::AbstractDevice, xy::AbstractArray, srcnormal::Direction)
-    (indx, indy) = coord2ind(d.grid, xy);
+"    setup_src!(d::AbstractDevice, pt::Point, srcnormal::Direction)"
+function setup_src!(d::AbstractDevice, pt::Point, srcnormal::Direction)
+    (indx, indy) = coord2ind(d.grid, pt);
     if srcnormal == x̂
         d.src[indx, :] = 1im;
     elseif srcnormal == ŷ
@@ -115,15 +114,22 @@ function setup_src!(d::AbstractDevice, xy::AbstractArray, srcnormal::Direction)
     end
 end
 
-"    setup_mode!(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, srcxy::AbstractArray, srcnormal::Direction, srcwidth::Number)"
-function setup_mode!(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, srcxy::AbstractArray, srcnormal::Direction, srcwidth::Number)
-    (_, vector, indx, indy) = get_modes(d, pol, ω, neff, 1, srcxy, srcnormal, srcwidth)
+# ============================================================================ #
+
+"    add_mode!(d::AbstractDevice, mode::Mode)"
+function add_mode!(d::AbstractDevice, mode::Mode)
+    append!(d.modes, [mode]);
+end
+
+"    setup_mode!(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, pt::Point, srcnormal::Direction, srcwidth::Number)"
+function setup_mode!(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, pt::Point, srcnormal::Direction, srcwidth::Number)
+    (_, vector, indx, indy) = get_modes(d, pol, ω, neff, 1, pt, srcnormal, srcwidth)
     d.src[indx, indy] += normalize(abs.(vector[:]));
 end
 
-"    get_modes(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, nmodes::Int, midxy::AbstractArray, slicenormal::Direction, slicewidth::Number)"
-function get_modes(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, nmodes::Int, midxy::AbstractArray, slicenormal::Direction, slicewidth::Number)
-    (indx, indy) = coord2ind(d.grid, midxy);
+"    get_modes(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, nmodes::Int, pt::Point, slicenormal::Direction, slicewidth::Number)"
+function get_modes(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number, nmodes::Int, pt::Point, slicenormal::Direction, slicewidth::Number)
+    (indx, indy) = coord2ind(d.grid, pt);
 
     slicenormal == x̂ && (srcpoints = Int(round(slicewidth/dy(d.grid))));
     slicenormal == ŷ && (srcpoints = Int(round(slicewidth/dx(d.grid))));

@@ -2,12 +2,13 @@ using AxisArrays, IntervalSets
 
 export probe_field, poynting, flux_surface_integral
 
-"     probe_field(field::Field, component::Symbol, xy::AbstractArray)"
-function probe_field(field::Field, component::Symbol, xy::AbstractArray)
-    (indx, indy) = coord2ind(field.grid, xy)
+"     probe_field(field::Field, component::Symbol, pt:Point)"
+function probe_field(field::Field, component::Symbol, pt::Point)
+    xind = AxisArrays.axisindexes(axes(field)[XX], atvalue(pt.x, atol=dx(field.grid)/2))
+    yind = AxisArrays.axisindexes(axes(field)[YY], atvalue(pt.y, atol=dy(field.grid)/2))
     isa(field, FieldTM) && ~in(component, [:Ez, :Hx, :Hy]) && error("$component is invalid for the TM polarization. Valid options are :Ez, :Hx, :Hy")
     isa(field, FieldTE) && ~in(component, [:Hz, :Ex, :Ey]) && error("$component is invalid for the TE polarization. Valid options are :Hz, :Ex, :Ey")
-    return field[indx, indy, component]
+    return field[xind, yind, component]
 end
 
 "    poynting(field::Field)"
@@ -28,12 +29,16 @@ function poynting(field::Field)
     end
 end
 
-"    flux_surface_integral(field::Field, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)"
-function flux_surface_integral(field::Field, ptmid::AbstractArray{<:Real}, width::Real, nrm::Direction)
-    if nrm == x̂
+""""
+    flux_surface_integral(field::Field, center::Point, width::Real, nrm::Direction)
+Compute integral of flux normal to a surface defined by `center`, `width`, and
+ `normal`.
+"""
+function flux_surface_integral(field::Field, center::Point, width::Real, normal::Direction)
+    if normal == x̂
         if isa(field, FieldTM)
-            xind = AxisArrays.axisindexes(axes(field)[XX], atvalue(ptmid[XX], atol=dx(field.grid)/2))
-            yint = (ptmid[YY]-width)..(ptmid[YY]+width)
+            xind = AxisArrays.axisindexes(axes(field)[XX], atvalue(center.x, atol=dx(field.grid)/2))
+            yint = (center.y-width)..(center.y+width)
             yind = AxisArrays.axisindexes(axes(field)[YY], yint)
             Ez   = view(field.data, xind:xind+1, yind, :Ez)
             Ez_x̂ = grid_average(Ez, x̂)[1,:]
@@ -41,8 +46,8 @@ function flux_surface_integral(field::Field, ptmid::AbstractArray{<:Real}, width
             return sum(-0.5*real.(Ez_x̂.*conj(Hy)))*dy(field.grid)
         end
         if isa(field, FieldTE)
-            xind = AxisArrays.axisindexes(axes(field)[XX], atvalue(ptmid[XX], atol=dx(field.grid)/2))
-            yint = (ptmid[YY]-width)..(ptmid[YY]+width)
+            xind = AxisArrays.axisindexes(axes(field)[XX], atvalue(pt.x, atol=dx(field.grid)/2))
+            yint = (center.y-width)..(center.y+width)
             yind = AxisArrays.axisindexes(axes(field)[YY], yint)
             Hz   = view(field.data, xind:xind+1, yind, :Hz)
             Hz_x̂ = grid_average(Hz, x̂)[1,:]
@@ -50,7 +55,7 @@ function flux_surface_integral(field::Field, ptmid::AbstractArray{<:Real}, width
             return sum(-0.5*real.(Ey.*conj(Hz_x̂)))*dy(field.grid)
         end
     end
-    if nrm == ŷ
+    if normal == ŷ
         if isa(field, FieldTM)
             error("ŷ normal TM calculation not yet implemented")
         end

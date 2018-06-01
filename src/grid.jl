@@ -99,13 +99,13 @@ ye(g::Grid, i::CartesianIndex{2}) = ye(g)[i.I[2]];
 xe(g::Grid, i::Int64) = xe(g)[ ind2sub(size(g),i)[1] ];
 ye(g::Grid, i::Int64) = ye(g)[ ind2sub(size(g),i)[2] ];
 
-"    coord2ind(g::Grid{D}, xy::AbstractArray)"
-function coord2ind(g::Grid{D}, xy::AbstractArray) where {D}
-    indx = x2ind(g, xy[1]);
+"    coord2ind(g::Grid{D}, pt::Point)"
+function coord2ind(g::Grid{D}, pt::Point) where {D}
+    indx = x2ind(g, pt.x);
     if D == 1
     	return indx
     end
-    return (indx, y2ind(g, xy[2]))
+    return (indx, y2ind(g, pt.y))
 end
 
 "    x2ind(g::Grid, x::Real)"

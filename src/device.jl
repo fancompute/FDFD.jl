@@ -54,10 +54,10 @@ function _compose_shapes!(pixels::AbstractArray, grid::Grid, shapes::AbstractVec
         x2 = xe(grid, i+1);
         y2 = ye(grid, i+1);
         shape = findin([x, y, 0.0], kd);
-        if ~isnull(shape)
+        if shape.hasvalue
             r₀, nout = surfpt_nearby( [x, y, 0.0], get(shape));
             frac = volfrac((SVector(x1, y1, 0.0), SVector(x2, y2, 0.0)), nout, r₀);
-            data = get(shape).data;
+            data = shape.value.data;
             if iscallable(data)
                 pixels[i] = data(x, y);
             else

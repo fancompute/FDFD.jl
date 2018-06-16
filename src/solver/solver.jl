@@ -12,34 +12,33 @@ function dolinearsolve(A::SparseMatrixCSC, b::Array, matrixsym::FDFDMatSymmetry)
         print_info("Solver: Pardiso")
         ps = PardisoSolver()
 
-    matrixsym == CNSym ? sym = Pardiso.COMPLEX_NONSYM : sym = Pardiso.COMPLEX_SYM
-    set_matrixtype!(ps, sym)
-        #set_solver!(ps, Pardiso.DIRECT_SOLVER)
+        matrixsym == CNSym ? sym = Pardiso.COMPLEX_NONSYM : sym = Pardiso.COMPLEX_SYM
+        set_matrixtype!(ps, sym)
 
-    A_pardiso = get_matrix(ps, A, :N)
+        A_pardiso = get_matrix(ps, A, :N)
 
-    set_phase!(ps, Pardiso.ANALYSIS)
-    pardiso(ps, A_pardiso, b)
+        set_phase!(ps, Pardiso.ANALYSIS)
+        pardiso(ps, A_pardiso, b)
 
-    set_phase!(ps, Pardiso.NUM_FACT)
-    pardiso(ps, A_pardiso, b)
+        set_phase!(ps, Pardiso.NUM_FACT)
+        pardiso(ps, A_pardiso, b)
 
-    set_phase!(ps, Pardiso.SOLVE_ITERATIVE_REFINE)
-    x = similar(b)
-    pardiso(ps, x, A_pardiso, b)
+        set_phase!(ps, Pardiso.SOLVE_ITERATIVE_REFINE)
+        x = similar(b)
+        pardiso(ps, x, A_pardiso, b)
 
-    set_phase!(ps, Pardiso.RELEASE_ALL)
-    pardiso(ps)
+        set_phase!(ps, Pardiso.RELEASE_ALL)
+        pardiso(ps)
     # elseif haskey(ENV, "FDFD_SOLVER") && lowercase(ENV["FDFD_SOLVER"]) == "mumps"
-    # print_info("Solver: MUMPS")
-    # x = similar(b)
-
-    # matrixsym == CNSym ? sym = 0 : sym = 2
-    # Afact = factorMUMPS(A, sym)
-
-    # x = applyMUMPS(Afact, b)
-
-    # destroyMUMPS(Afact)
+    #     print_info("Solver: MUMPS")
+    #     x = similar(b)
+    #
+    #     matrixsym == CNSym ? sym = 0 : sym = 2
+    #     Afact = factorMUMPS(A, sym)
+    #
+    #     x = applyMUMPS(Afact, b)
+    #
+    #     destroyMUMPS(Afact)
     else
         print_info("Solver: Julia")
         x = lufact(A)\b

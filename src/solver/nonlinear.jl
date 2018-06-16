@@ -12,6 +12,7 @@ mutable struct χ3Device{D} <: AbstractNonlinearDevice{D}
     χ::Array{Float}
     src::Array{Complex}
     ω::AbstractVector{Float}
+    modes::Array{Mode}
 end
 
 "    χ3Device(grid::Grid, ω::AbstractVector{Float})"
@@ -19,8 +20,11 @@ function χ3Device(grid::Grid, ω::AbstractVector{Float})
     ϵᵣ = ones(Complex, size(grid));
     χ = zeros(Float, size(grid));
     src = zeros(Complex, size(grid));
-    return χ3Device(grid, ϵᵣ, χ, src, ω)
+    return χ3Device(grid, ϵᵣ, χ, src, ω, Array{Mode}(0))
 end
+
+"    χ3Device(grid::Grid, ω::Float)"
+χ3Device(grid::Grid, ω::Float) = χ3Device(grid::Grid, [ω])
 
 "    setup_χ!(d::χ3Device, shapes::AbstractVector{<:Shape})"
 setup_χ!(d::χ3Device, shapes::AbstractVector{<:Shape}) = _compose_shapes!(d.χ, d.grid, shapes)
@@ -31,42 +35,58 @@ setup_χ!(d::χ3Device, region, value) = _mask_values!(d.χ, d.grid, region, val
 "    solve(d::χ3Device, which_method::IterativeMethod)"
 function solve(d::χ3Device, which_method::IterativeMethod)
     (ϵ₀, μ₀, c₀) = normalize_parameters(d);
-    ω = d.ω[1];
 
-    Tϵ = spdiagm(ϵ₀*d.ϵᵣ[:]);
+    Nω = length(d.ω);
+    fields = Array{FieldTM}(Nω);
 
-    Hx = zeros(Complex128, size(d.grid));
-    Hy = zeros(Complex128, size(d.grid));
-    Ez = zeros(Complex128, size(d.grid));
+    for i in eachindex(d.ω)
+        print_info("======= Frequency: $i/$Nω =======");
+        ω = d.ω[i];
 
-    (Sxf, Sxb, Syf, Syb) = S_create(d.grid, ω);
+        length(d.modes) > 0 && ( d.src=zeros(Complex, size(d.grid)) ) # Only reset if we are using modes
+        for mode in d.modes
+            # TODO: handle the polarization here
+            setup_mode!(d, TM, ω, mode.neff, mode.pt, mode.dir, mode.width);
+        end
 
-    # Construct derivates
-    δxb = Sxb*δ(x̂, Backward, d.grid);
-    δxf = Sxf*δ(x̂, Forward,  d.grid);
-    δyb = Syb*δ(ŷ, Backward, d.grid);
-    δyf = Syf*δ(ŷ, Forward,  d.grid);
+        Tϵ = spdiagm(ϵ₀*d.ϵᵣ[:]);
 
-    A = δxf*μ₀^-1*δxb + δyf*μ₀^-1*δyb + ω^2*Tϵ;
-    b = 1im*ω*d.src[:];
-    print_info("Solving linear system");
-    ez = dolinearsolve(A, b, CNSym);
+        Hx = zeros(Complex128, size(d.grid));
+        Hy = zeros(Complex128, size(d.grid));
+        Ez = zeros(Complex128, size(d.grid));
 
-    coeff = ω^2*ϵ₀*3*d.χ[:]/d.grid.L₀;
+        (Sxf, Sxb, Syf, Syb) = S_create(d.grid, ω);
 
-    if which_method == IterativeMethodB
-        print_info("Starting nonlinear iteration using Born");
-        (ez, err) = _doborn(ez, A, b, coeff);
+        # Construct derivates
+        δxb = Sxb*δ(x̂, Backward, d.grid);
+        δxf = Sxf*δ(x̂, Forward,  d.grid);
+        δyb = Syb*δ(ŷ, Backward, d.grid);
+        δyf = Syf*δ(ŷ, Forward,  d.grid);
+
+        A = δxf*μ₀^-1*δxb + δyf*μ₀^-1*δyb + ω^2*Tϵ;
+        b = 1im*ω*d.src[:];
+        print_info("Solving linear system");
+        ez = dolinearsolve(A, b, CNSym);
+
+        coeff = ω^2*ϵ₀*3*d.χ[:]/d.grid.L₀;
+
+        if which_method == IterativeMethodB
+            print_info("Starting nonlinear iteration using Born");
+            (ez, err) = _doborn(ez, A, b, coeff);
+        end
+        if which_method == IterativeMethodGN
+            print_info("Starting nonlinear iteration using Gauss-Newton");
+            (ez, err) = _donewton(ez, A, b, coeff);
+        end
+
+        hx = -1/1im/ω/μ₀*δyb*ez;
+        hy = 1/1im/ω/μ₀*δxb*ez;
+
+        fields[i] = FieldTM(d.grid, ω, ez, hx, hy)
     end
-    if which_method == IterativeMethodGN
-        print_info("Starting nonlinear iteration using Gauss-Newton");
-        (ez, err) = _donewton(ez, A, b, coeff);
-    end
-
-    hx = -1/1im/ω/μ₀*δyb*ez;
-    hy = 1/1im/ω/μ₀*δxb*ez;
-
-    return (FieldTM(d.grid, ω, ez, hx, hy), err)
+    
+    Nω == 1 && return fields[1]
+    return fields
 end
 
 function _doborn(ez, A, b, coeff; tol = 1e-12, maxiterations = 50)

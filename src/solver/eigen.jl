@@ -1,24 +1,21 @@
 export eigenmode, eigenfrequency
 
-"    eigenmode(d::AbstractDevice, pol::Polarization, neff::Number, neigenvalues::Int)"
-function eigenmode(d::AbstractDevice, pol::Polarization, neff::Number, neigenvalues::Int)
+"    eigenmode(d::AbstractDevice{1}, pol::Polarization, neff::Number, neigenvalues::Int)"
+function eigenmode(d::AbstractDevice{1}, pol::Polarization, neff::Number, neigenvalues::Int)
     (ϵ₀, μ₀, c₀) = normalize_parameters(d);
     ω = d.ω[1];
-    if ndims(d.grid) == 1
-        Tϵ = spdiagm(ϵ₀*d.ϵᵣ[:]);
-        Tϵxinv = spdiagm((ϵ₀*grid_average(d.ϵᵣ, x̂)[:]).^-1);
 
-        δxb = δ(x̂, Backward, d.grid);
-        δxf = δ(x̂, Forward,  d.grid);
+    Tϵ = spdiagm(ϵ₀*d.ϵᵣ[:]);
+    Tϵxinv = spdiagm((ϵ₀*grid_average(d.ϵᵣ, x̂)[:]).^-1);
 
-        if pol == TM
-            A = ω^2*μ₀*Tϵ + δxf*δxb;
-        end
-        if pol == TE
-            A = ω^2*μ₀*Tϵ + Tϵ*δxf*Tϵxinv*δxb;
-        end
-    else
-        error("solve() currently only solves 1D systems");
+    δxb = δ(x̂, Backward, d.grid);
+    δxf = δ(x̂, Forward,  d.grid);
+
+    if pol == TM
+        A = ω^2*μ₀*Tϵ + δxf*δxb;
+    end
+    if pol == TE
+        A = ω^2*μ₀*Tϵ + Tϵ*δxf*Tϵxinv*δxb;
     end
 
     estimatedβ = ω/c₀*neff;
@@ -26,6 +23,37 @@ function eigenmode(d::AbstractDevice, pol::Polarization, neff::Number, neigenval
     (β², vectors) = eigs(A, nev=neigenvalues, sigma=estimatedβ^2);
 
     β = sqrt.(β²);
+    return (β, vectors)
+end
+
+"    eigenmode(d::AbstractDevice{2}, neff::Number, neigenvalues::Int)"
+function eigenmode(d::AbstractDevice{2}, neff::Number, neigenvalues::Int)
+    # (ϵ₀, μ₀, c₀) = normalize_parameters(d);
+    # ω = d.ω[1];
+    #
+    # Tϵx = spdiagm(ϵ₀*grid_average(d.ϵᵣ, x̂)[:]);
+    # Tϵy = spdiagm(ϵ₀*grid_average(d.ϵᵣ, ŷ)[:]);
+    # Tϵzinv = spdiagm((ϵ₀*grid_average(grid_average(d.ϵᵣ[:], x̂), ŷ)).^-1);
+    #
+    # δxb = δ(x̂, Backward, d.grid);
+    # δxf = δ(x̂, Forward,  d.grid);
+    # δyb = δ(ŷ, Backward, d.grid);
+    # δyf = δ(ŷ, Forward,  d.grid);
+    #
+    # A = ω^2*μ₀*blkdiag(Tϵy, Tϵx) + blkdiag(Tϵy, Tϵx)*vcat(-δyf, δxf)*Tϵzinv*hcat(-δyb, δxb) + vcat(δxb, δyb)*hcat(δxf, δyf);
+    #
+    # estimatedβ = ω/c₀*neff;
+    #
+    # (β², vectors) = eigs(A, nev=neigenvalues, sigma=estimatedβ^2);
+    #
+    # β = sqrt.(β²);
+    # hx = vectors(1:length(d.grid), i);
+    # hy = vectors(length(d.grid)+1:2*length(d.grid), i);
+    # hz = -1im./β * (Dxf * hx + Dyf * hy);
+    #
+    # ex = 1./(1i*omega) * T_eps_x^-1 * (Dyb * hz + gamma * hy);
+    # ey = 1./(1i*omega) * T_eps_y^-1 * (-gamma * hx - Dxb * hz);
+    # ez = 1./(1i*omega) * T_eps_z^-1 * (Dxb * hy - Dyb * hx);
     return (β, vectors)
 end
 

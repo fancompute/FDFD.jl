@@ -1,4 +1,4 @@
-export Result, Field, FieldTM, FieldTE
+export Result, Field, FieldTM, FieldTE, FieldAll
 export AxisX, AxisY, AxisComponent
 
 const AxisX = Axis{:x}
@@ -75,6 +75,21 @@ end
 function FieldTE(grid::Grid{2}, ω::Number, Hz::Array{<:Complex,1}, Ex::Array{<:Complex,1}, Ey::Array{<:Complex,1})
   	sz = size(grid);
     return FieldTE(grid, ω, cat(3, reshape(Hz, sz), reshape(Ex, sz), reshape(Ey, sz)))
+end
+
+struct FieldAll <: Field{Complex,3}
+    grid::Grid{2}
+    ω::Complex
+    data::AxisArray
+end
+
+function FieldAll(grid::Grid{2}, ω::Number, data::Array{<:Complex,3})
+    return FieldAll(grid, Complex(ω), AxisArray(data, AxisX(xc(grid)), AxisY(yc(grid)), AxisComponent([:Ex, :Ey, :Ez, :Hx, :Hy, :Hz])))
+end
+
+function FieldAll(grid::Grid{2}, ω::Number, Ex::Array{<:Complex,1}, Ey::Array{<:Complex,1}, Ez::Array{<:Complex,1}, Hx::Array{<:Complex,1}, Hy::Array{<:Complex,1}, Hz::Array{<:Complex,1})
+  	sz = size(grid);
+    return FieldAll(grid, ω, cat(3, reshape(Ex, sz), reshape(Ey, sz), reshape(Ez, sz), reshape(Hx, sz), reshape(Hy, sz), reshape(Hz, sz)))
 end
 
 # ============================================================================ #

@@ -15,20 +15,23 @@ function dolinearsolve(A::SparseMatrixCSC, b::Array, matrixsym::FDFDMatSymmetry)
         matrixsym == CNSym ? sym = Pardiso.COMPLEX_NONSYM : sym = Pardiso.COMPLEX_SYM
         set_matrixtype!(ps, sym)
 
-        A_pardiso = get_matrix(ps, A, :N)
-
-        set_phase!(ps, Pardiso.ANALYSIS)
-        pardiso(ps, A_pardiso, b)
-
-        set_phase!(ps, Pardiso.NUM_FACT)
-        pardiso(ps, A_pardiso, b)
-
-        set_phase!(ps, Pardiso.SOLVE_ITERATIVE_REFINE)
-        x = similar(b)
-        pardiso(ps, x, A_pardiso, b)
-
+        # A_pardiso = get_matrix(ps, A, :N)
+        # # A_pardiso = A
+        #
+        # set_phase!(ps, Pardiso.ANALYSIS)
+        # pardiso(ps, A, b)
+        #
+        # set_phase!(ps, Pardiso.NUM_FACT)
+        # pardiso(ps, A, b)
+        #
+        # set_phase!(ps, Pardiso.SOLVE_ITERATIVE_REFINE)
+        # x = similar(b)
+        # pardiso(ps, x, A, b)
+        #
+        x = Pardiso.solve(ps, A, b);
         set_phase!(ps, Pardiso.RELEASE_ALL)
         pardiso(ps)
+
     # elseif haskey(ENV, "FDFD_SOLVER") && lowercase(ENV["FDFD_SOLVER"]) == "mumps"
     #     print_info("Solver: MUMPS")
     #     x = similar(b)

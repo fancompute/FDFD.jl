@@ -1,4 +1,4 @@
-using Pardiso, MUMPS
+using Pardiso #, MUMPS
 
 function dolinearsolve(A::SparseMatrixCSC, b::Array, matrixsym::FDFDMatSymmetry)
     tic();

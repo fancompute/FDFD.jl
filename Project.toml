@@ -1,0 +1,10 @@
+name = "FDFD"
+uuid = "47249150-a57d-11e8-0850-953555c55631"
+authors = ["Ian Williamson <iwill@stanford.edu>"]
+version = "0.1.0"
+
+[deps]
+AxisArrays = "39de3d68-74b9-583c-8d2d-e117c070f3a9"
+IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
+Pardiso = "46dd5b70-b6fb-5a00-ae2d-e8fea33afaf2"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"

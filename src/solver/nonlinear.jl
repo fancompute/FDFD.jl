@@ -40,7 +40,7 @@ function solve(d::χ3Device, which_method::IterativeMethod)
     fields = Array{FieldTM}(Nω);
 
     for i in eachindex(d.ω)
-        print_info("======= Frequency: $i/$Nω =======");
+        @info "Frequency: $i/$Nω"
         ω = d.ω[i];
 
         length(d.modes) > 0 && ( d.src=zeros(Complex, size(d.grid)) ) # Only reset if we are using modes
@@ -49,11 +49,11 @@ function solve(d::χ3Device, which_method::IterativeMethod)
             setup_mode!(d, TM, ω, mode.neff, mode.pt, mode.dir, mode.width);
         end
 
-        Tϵ = spdiagm(ϵ₀*d.ϵᵣ[:]);
+        Tϵ = Sparse(Diagonal((ϵ₀*d.ϵᵣ[:]));
 
-        Hx = zeros(Complex128, size(d.grid));
-        Hy = zeros(Complex128, size(d.grid));
-        Ez = zeros(Complex128, size(d.grid));
+        Hx = zeros(ComplexF64, size(d.grid));
+        Hy = zeros(ComplexF64, size(d.grid));
+        Ez = zeros(ComplexF64, size(d.grid));
 
         (Sxf, Sxb, Syf, Syb) = S_create(d.grid, ω);
 
@@ -65,17 +65,17 @@ function solve(d::χ3Device, which_method::IterativeMethod)
 
         A = δxf*μ₀^-1*δxb + δyf*μ₀^-1*δyb + ω^2*Tϵ;
         b = 1im*ω*d.src[:];
-        print_info("Solving linear system");
+        @info "Solving linear system"
         ez = dolinearsolve(A, b, CNSym);
 
         coeff = ω^2*ϵ₀*3*d.χ[:]/d.grid.L₀;
 
         if which_method == IterativeMethodB
-            print_info("Starting nonlinear iteration using Born");
+            @info "Starting nonlinear iteration using Born"
             (ez, err) = _doborn(ez, A, b, coeff);
         end
         if which_method == IterativeMethodGN
-            print_info("Starting nonlinear iteration using Gauss-Newton");
+            @info "Starting nonlinear iteration using Gauss-Newton"
             (ez, err) = _donewton(ez, A, b, coeff);
         end
 
@@ -84,7 +84,7 @@ function solve(d::χ3Device, which_method::IterativeMethod)
 
         fields[i] = FieldTM(d.grid, ω, ez, hx, hy)
     end
-    
+
     Nω == 1 && return fields[1]
     return fields
 end
@@ -93,14 +93,14 @@ function _doborn(ez, A, b, coeff; tol = 1e-12, maxiterations = 50)
     i = 1;
     err = [1.0];
     while err[end] > tol && i <= maxiterations
-        print_info(@sprintf("iteration number: %d", i));
-        ez_new = dolinearsolve(A + spdiagm(coeff.*ez.*conj.(ez)), b, CNSym);
+        @debug "iteration number: $i"
+        ez_new = dolinearsolve(A + Sparse(Diagonal(coeff.*ez.*conj.(ez)), b, CNSym));
         append!(err, norm(ez_new - ez)/norm(ez));
 
         ez = ez_new;
         i += 1;
 
-        print_info(@sprintf("step error: %e", err[end]));
+        @debug "step error: $(err[end])"
     end
     return (ez, err)
 end
@@ -112,17 +112,17 @@ function _donewton(ez, A, b, coeff; tol = 1e-12, maxiterations = 50)
 
     ez = [ez; conj.(ez)];
     while err[end] > tol && i <= maxiterations
-        print_info(@sprintf("iteration number: %d", i));
-        F = (A + spdiagm(coeff.*ez[1:M].*conj.(ez[1:M])))*ez[1:M] - b;
-        J1  = A + spdiagm(2*coeff.*conj.(ez[1:M]).*ez[1:M]);
-        J2 = spdiagm(coeff.*ez[1:M].*ez[1:M]);
+        @debug "iteration number: $i"
+        F = (A + Sparse(Diagonal(coeff.*ez[1:M].*conj.(ez[1:M]))))*ez[1:M] - b;
+        J1  = A + Sparse(Diagonal(2*coeff.*conj.(ez[1:M]).*ez[1:M]));
+        J2 = Sparse(Diagonal(coeff.*ez[1:M].*ez[1:M]));
         J = [J1 J2; conj.(J2) conj.(J1)];
         δez = dolinearsolve(J, [F; conj.(F)], CNSym);
         normez = norm(ez);
         ez = ez - δez;
         append!(err, norm(δez)/normez);
         i += 1;
-        print_info(@sprintf("step error: %e", err[end]));
+        @debug "step error: $(err[end])"
     end
     ez = ez[1:M];
     return (ez, err)

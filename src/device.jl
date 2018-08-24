@@ -28,7 +28,7 @@ end
 function Device(grid::Grid, ω::AbstractVector{Float})
 	ϵᵣ = ones(Complex, size(grid));
     src = zeros(Complex, size(grid));
-	return Device(grid, ϵᵣ, src, ω, Array{Mode}(0))
+	return Device(grid, ϵᵣ, src, ω, Array{Mode}(undef, 0))
 end
 
 "    Device(grid::Grid, ω::Float)"

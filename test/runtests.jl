@@ -1,5 +1,5 @@
 using FDFD, GeometryPrimitives
-using Base.Test
+using Test
 
 set_log_level!(0);
 ENV["PARDISOLICMESSAGE"]=0

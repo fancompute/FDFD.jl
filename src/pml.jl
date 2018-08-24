@@ -9,7 +9,7 @@ function create_sfactor(w::Direction, s::DerivativeDirection, g::Grid, ω::Float
     σw = l -> σmax*(l/Tw)^m;
     S = l -> 1-1im*σw(l)/(ω*ϵ₀);
 
-    sfactor_array = ones(Complex128, Nw);
+    sfactor_array = ones(ComplexF64, Nw);
 
     for i in 1:Nw
         if s == Forward
@@ -38,10 +38,10 @@ function S_create(g::Grid, ω::Float)
     s_vector_y_b = create_sfactor(ŷ, Backward, g, ω);
 
     # Fill the 2D space with layers of appropriate s-factors
-    Sx_f_2D = zeros(Complex128, size(g));
-    Sx_b_2D = zeros(Complex128, size(g));
-    Sy_f_2D = zeros(Complex128, size(g));
-    Sy_b_2D = zeros(Complex128, size(g));
+    Sx_f_2D = zeros(ComplexF64, size(g));
+    Sx_b_2D = zeros(ComplexF64, size(g));
+    Sy_f_2D = zeros(ComplexF64, size(g));
+    Sy_b_2D = zeros(ComplexF64, size(g));
 
     for i = 1:size(g, 1)
         Sy_f_2D[i, :] = s_vector_y_f.^-1;
@@ -54,10 +54,10 @@ function S_create(g::Grid, ω::Float)
     end
 
     # Construct the 1D total s-array into a diagonal matrix
-    Sx_f = spdiagm(Sx_f_2D[:]);
-    Sx_b = spdiagm(Sx_b_2D[:]);
-    Sy_f = spdiagm(Sy_f_2D[:]);
-    Sy_b = spdiagm(Sy_b_2D[:]);
+    Sx_f = Sparse(Diagonal(Sx_f_2D[:]));
+    Sx_b = Sparse(Diagonal(Sx_b_2D[:]));
+    Sy_f = Sparse(Diagonal(Sy_f_2D[:]));
+    Sy_b = Sparse(Diagonal(Sy_b_2D[:]));
 
     return (Sx_f, Sx_b, Sy_f, Sy_b)
 end

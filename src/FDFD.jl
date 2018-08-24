@@ -1,6 +1,7 @@
 module FDFD
 
 using GeometryPrimitives, StaticArrays, AxisArrays, IntervalSets
+using Logging, SparseArrays, LinearAlgebra
 
 include("./types.jl");
 include("./grid.jl");
@@ -34,19 +35,6 @@ function unwrap(v, inplace=false)
     end
   end
   return unwrapped
-end
-
-function print_info(strs...)
-    global log_level
-    msg = " "
-    for str in strs
-        msg = msg*str
-    end
-    log_level > 0 && println(msg)
-end
-
-function print_warn(strs...)
-    print_info("\x1b[1m\x1b[31m(!)\x1b[0m ", strs...)
 end
 
 end

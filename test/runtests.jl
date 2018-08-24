@@ -1,5 +1,6 @@
 using FDFD, GeometryPrimitives
 using Test
+using LinearAlgebra
 
 set_log_level!(0);
 ENV["PARDISOLICMESSAGE"]=0
@@ -23,7 +24,7 @@ end
 function compare_solvers_wg()
     grd = Grid(0.02, [15, 15], [0.0, 10.0], [-1.0, 1.0]);
     dev = Device(grd, 2*π*200e12);
-    setup_ϵᵣ!(dev, [Box([5.0, 0.0, 0.0], [Inf, 0.3, Inf], eye(3), 12)])
+    setup_ϵᵣ!(dev, [Box([5.0, 0.0, 0.0], [Inf, 0.3, Inf], I, 12)])
     add_mode!(dev, Mode(TM, x̂, 3.5, Point(1.0, 0), 0.8));
 
     ENV["FDFD_SOLVER"] = "julia"

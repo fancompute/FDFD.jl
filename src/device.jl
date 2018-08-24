@@ -74,7 +74,7 @@ function _mask_values!(pixels::AbstractArray, grid::Grid, region, value)
             value_assigned = [value(x, y) for x in xc(grid), y in yc(grid)];
             pixels[mask]   = value_assigned[mask];
         else
-            pixels[mask]   = value;
+            pixels[mask]  .= value;
         end
     elseif ndims(grid) == 1
         mask = [region(x) for x in xc(grid)];
@@ -82,7 +82,7 @@ function _mask_values!(pixels::AbstractArray, grid::Grid, region, value)
             value_assigned = [value(x) for x in xc(grid)];
             pixels[mask]   = value_assigned[mask];
         else
-            pixels[mask]   = value;
+            pixels[mask]  .= value;
         end
     else
         error("Unkown device dimension!")
@@ -140,7 +140,7 @@ function get_modes(d::AbstractDevice, pol::Polarization, ω::Float, neff::Number
 
     if slicenormal == x̂
         indx = indx;
-        indy = indy+(-M:M);
+        indy = indy .+ (-M:M);
         dh = dy(d.grid);
     elseif slicenormal == ŷ
         indx = indx+(-M:M);

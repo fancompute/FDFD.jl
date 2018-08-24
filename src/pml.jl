@@ -54,10 +54,10 @@ function S_create(g::Grid, ω::Float)
     end
 
     # Construct the 1D total s-array into a diagonal matrix
-    Sx_f = Sparse(Diagonal(Sx_f_2D[:]));
-    Sx_b = Sparse(Diagonal(Sx_b_2D[:]));
-    Sy_f = Sparse(Diagonal(Sy_f_2D[:]));
-    Sy_b = Sparse(Diagonal(Sy_b_2D[:]));
+    Sx_f = sparse(Diagonal(Sx_f_2D[:]));
+    Sx_b = sparse(Diagonal(Sx_b_2D[:]));
+    Sy_f = sparse(Diagonal(Sy_f_2D[:]));
+    Sy_b = sparse(Diagonal(Sy_b_2D[:]));
 
     return (Sx_f, Sx_b, Sy_f, Sy_b)
 end

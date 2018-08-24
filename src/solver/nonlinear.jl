@@ -49,7 +49,7 @@ function solve(d::χ3Device, which_method::IterativeMethod)
             setup_mode!(d, TM, ω, mode.neff, mode.pt, mode.dir, mode.width);
         end
 
-        Tϵ = Sparse(Diagonal((ϵ₀*d.ϵᵣ[:]));
+        Tϵ = sparse(Diagonal((ϵ₀*d.ϵᵣ[:])));
 
         Hx = zeros(ComplexF64, size(d.grid));
         Hy = zeros(ComplexF64, size(d.grid));
@@ -94,7 +94,7 @@ function _doborn(ez, A, b, coeff; tol = 1e-12, maxiterations = 50)
     err = [1.0];
     while err[end] > tol && i <= maxiterations
         @debug "iteration number: $i"
-        ez_new = dolinearsolve(A + Sparse(Diagonal(coeff.*ez.*conj.(ez)), b, CNSym));
+        ez_new = dolinearsolve(A + sparse(Diagonal(coeff.*ez.*conj.(ez)), b, CNSym));
         append!(err, norm(ez_new - ez)/norm(ez));
 
         ez = ez_new;
@@ -113,9 +113,9 @@ function _donewton(ez, A, b, coeff; tol = 1e-12, maxiterations = 50)
     ez = [ez; conj.(ez)];
     while err[end] > tol && i <= maxiterations
         @debug "iteration number: $i"
-        F = (A + Sparse(Diagonal(coeff.*ez[1:M].*conj.(ez[1:M]))))*ez[1:M] - b;
-        J1  = A + Sparse(Diagonal(2*coeff.*conj.(ez[1:M]).*ez[1:M]));
-        J2 = Sparse(Diagonal(coeff.*ez[1:M].*ez[1:M]));
+        F = (A + sparse(Diagonal(coeff.*ez[1:M].*conj.(ez[1:M]))))*ez[1:M] - b;
+        J1  = A + sparse(Diagonal(2*coeff.*conj.(ez[1:M]).*ez[1:M]));
+        J2 = sparse(Diagonal(coeff.*ez[1:M].*ez[1:M]));
         J = [J1 J2; conj.(J2) conj.(J1)];
         δez = dolinearsolve(J, [F; conj.(F)], CNSym);
         normez = norm(ez);

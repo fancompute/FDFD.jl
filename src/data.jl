@@ -59,7 +59,7 @@ end
 
 function FieldTM(grid::Grid{2}, ω::Number, Ez::Array{<:Complex,1}, Hx::Array{<:Complex,1}, Hy::Array{<:Complex,1})
   	sz = size(grid);
-    return FieldTM(grid, ω, cat(3, reshape(Ez, sz), reshape(Hx, sz), reshape(Hy, sz)))
+    return FieldTM(grid, ω, cat(reshape(Ez, sz), reshape(Hx, sz), reshape(Hy, sz), dims=3))
 end
 
 struct FieldTE <: Field{Complex,3}
@@ -74,7 +74,7 @@ end
 
 function FieldTE(grid::Grid{2}, ω::Number, Hz::Array{<:Complex,1}, Ex::Array{<:Complex,1}, Ey::Array{<:Complex,1})
   	sz = size(grid);
-    return FieldTE(grid, ω, cat(3, reshape(Hz, sz), reshape(Ex, sz), reshape(Ey, sz)))
+    return FieldTE(grid, ω, cat(reshape(Hz, sz), reshape(Ex, sz), reshape(Ey, sz), dims=3))
 end
 
 struct FieldAll <: Field{Complex,3}

@@ -74,11 +74,11 @@ function dy(g::Grid{2})
 end
 
 function xc(g::Grid)
-	return g.bounds[1][1]+dx(g)*(0.5:1:g.N[1])
+	return g.bounds[1][1] .+ dx(g)*(0.5:1:g.N[1])
 end
 
 function yc(g::Grid{2})
-	return g.bounds[1][2]+dy(g)*(0.5:1:g.N[2])
+	return g.bounds[1][2] .+ dy(g)*(0.5:1:g.N[2])
 end
 
 xc(g::Grid, i::CartesianIndex{2}) = xc(g)[i.I[1]];
@@ -135,20 +135,20 @@ function δ(w::Direction, s::DerivativeDirection, g::Grid{K}) where {K}
 
     if w == x̂
         if s == Forward
-            δxf = 1/dx(g)*spdiagm([ones(Nx-1), -ones(Nx), 1], [1, 0, -Nx+1]);
-            return kron(speye(Ny), δxf)
+            δxf = 1/dx(g)*spdiagm(1 => ones(Nx-1), 0 => -ones(Nx), -Nx+1 => [1]);
+            return kron(sparse(1.0I, Ny, Ny), δxf)
         else
-            δxb = 1/dx(g)*spdiagm([-ones(Nx-1), ones(Nx), -1], [-1, 0, Nx-1]);
-            return kron(speye(Ny), δxb)
+            δxb = 1/dx(g)*spdiagm(-1 => -ones(Nx-1), 0 => ones(Nx), Nx-1 => [-1]);
+            return kron(sparse(1.0I, Ny, Ny), δxb)
         end
     end
     if w == ŷ
         if s == Forward
-            δyf = 1/dy(g)*spdiagm([ones(Ny-1), -ones(Ny), 1], [1, 0, -Ny+1]);
-            return kron(δyf, speye(Nx))
+            δyf = 1/dy(g)*spdiagm(1 => ones(Ny-1), 0 => -ones(Ny), -Ny+1 => [1]);
+            return kron(δyf, sparse(1.0I, Nx, Nx))
         else
-            δyb = 1/dy(g)*spdiagm([-ones(Ny-1), ones(Ny), -1], [-1, 0, Ny-1]);
-            return kron(δyb, speye(Nx))
+            δyb = 1/dy(g)*spdiagm(-1 => -ones(Ny-1), 0 => ones(Ny), Ny-1 => [-1]);
+            return kron(δyb, sparse(1.0I, Nx, Nx))
         end
     end
 end

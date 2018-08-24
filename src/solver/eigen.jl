@@ -7,8 +7,8 @@ function eigenmode(d::AbstractDevice{1}, pol::Polarization, neff::Number, neigen
     (ϵ₀, μ₀, c₀) = normalize_parameters(d);
     ω = d.ω[1];
 
-    Tϵ = Sparse(Diagonal((ϵ₀*d.ϵᵣ[:]));
-    Tϵxinv = Sparse(Diagonal((ϵ₀*grid_average(d.ϵᵣ, x̂)[:]).^-1));
+    Tϵ = sparse(Diagonal((ϵ₀*d.ϵᵣ[:])));
+    Tϵxinv = sparse(Diagonal((ϵ₀*grid_average(d.ϵᵣ, x̂)[:]).^-1));
 
     δxb = δ(x̂, Backward, d.grid);
     δxf = δ(x̂, Forward,  d.grid);
@@ -33,9 +33,9 @@ function eigenmode(d::AbstractDevice{2}, neff::Number, neigenvalues::Int)
     # (ϵ₀, μ₀, c₀) = normalize_parameters(d);
     # ω = d.ω[1];
     #
-    # Tϵx = Sparse(Diagonal(ϵ₀*grid_average(d.ϵᵣ, x̂)[:]));
-    # Tϵy = Sparse(Diagonal(ϵ₀*grid_average(d.ϵᵣ, ŷ)[:]));
-    # Tϵzinv = Sparse(Diagonal((ϵ₀*grid_average(grid_average(d.ϵᵣ[:], x̂), ŷ)).^-1));
+    # Tϵx = sparse(Diagonal(ϵ₀*grid_average(d.ϵᵣ, x̂)[:]));
+    # Tϵy = sparse(Diagonal(ϵ₀*grid_average(d.ϵᵣ, ŷ)[:]));
+    # Tϵzinv = sparse(Diagonal((ϵ₀*grid_average(grid_average(d.ϵᵣ[:], x̂), ŷ)).^-1));
     #
     # δxb = δ(x̂, Backward, d.grid);
     # δxf = δ(x̂, Forward,  d.grid);
@@ -74,7 +74,7 @@ function eigenfrequency(d::AbstractDevice, pol::Polarization, neigenvalues::Int;
     if pol == TM
         fields = Array{FieldTM}(neigenvalues);
 
-        Tϵᵣ⁻¹ = Sparse(Diagonal(1 ./ d.ϵᵣ[:]));
+        Tϵᵣ⁻¹ = sparse(Diagonal(1 ./ d.ϵᵣ[:]));
         A = Tϵᵣ⁻¹*δxf*δxb + Tϵᵣ⁻¹*δyf*δyb;
 
         (ω²μϵ, ez) = eigs(A, nev=neigenvalues, sigma=-ω₀^2*μ₀*ϵ₀, which=which);
@@ -91,8 +91,8 @@ function eigenfrequency(d::AbstractDevice, pol::Polarization, neigenvalues::Int;
     if pol == TE
         fields = Array{FieldTE}(neigenvalues);
 
-        Tϵx⁻¹ = Sparse(Diagonal(1 ./ grid_average(ϵ₀*d.ϵᵣ, x̂)[:]));
-        Tϵy⁻¹ = Sparse(Diagonal(1 ./ grid_average(ϵ₀*d.ϵᵣ, ŷ)[:]));
+        Tϵx⁻¹ = sparse(Diagonal(1 ./ grid_average(ϵ₀*d.ϵᵣ, x̂)[:]));
+        Tϵy⁻¹ = sparse(Diagonal(1 ./ grid_average(ϵ₀*d.ϵᵣ, ŷ)[:]));
         A = δxf*Tϵx⁻¹*δxb + δyf*Tϵy⁻¹*δyb;
 
         (ω²μ, hz) = eigs(A, nev=neigenvalues, sigma=-ω₀^2*μ₀, which=which);

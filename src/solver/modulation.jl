@@ -18,7 +18,7 @@ function ModulatedDevice(grid::Grid, ω::AbstractVector{Float}, Ω::Float, nside
     ϵᵣ = ones(Complex, size(grid));
     Δϵᵣ = zeros(Complex, size(grid));
     src = zeros(Complex, size(grid));
-    return ModulatedDevice(grid, ϵᵣ, Δϵᵣ, src, ω, Ω, nsidebands, sharedpml, Array{Mode}(0))
+    return ModulatedDevice(grid, ϵᵣ, Δϵᵣ, src, ω, Ω, nsidebands, sharedpml, Array{Mode}(undef, 0))
 end
 
 "    ModulatedDevice(grid::Grid, ω::Float, Ω::Float, nsidebands::Integer; sharedpml::Bool=true)"
@@ -41,12 +41,12 @@ function solve(d::ModulatedDevice)
     n = -nsidebands:1:nsidebands;
     Ω = d.Ω;
 
-    fields = Array{FieldTM}(Nω, nfrequencies);
+    fields = Array{FieldTM}(undef, Nω, nfrequencies);
 
     for i in eachindex(d.ω)
         @info "Frequency: $i/$Nω"
         ω = d.ω[i];
-        ωn = ω + Ω*n;
+        ωn = ω .+ Ω*n;
 
         length(d.modes) > 0 && ( d.src=zeros(Complex, size(d.grid)) ) # Only reset if we are using modes
         for mode in d.modes
@@ -54,8 +54,8 @@ function solve(d::ModulatedDevice)
             setup_mode!(d, TM, ω, mode.neff, mode.pt, mode.dir, mode.width);
         end
 
-        Tϵ = Sparse(Diagonal(ϵ₀*d.ϵᵣ[:])); #TODO: check reshape vs [:]
-        TΔϵ = Sparse(Diagonal(ϵ₀*d.Δϵᵣ[:])); #TODO: check reshape vs [:]
+        Tϵ = sparse(Diagonal(ϵ₀*d.ϵᵣ[:])); #TODO: check reshape vs [:]
+        TΔϵ = sparse(Diagonal(ϵ₀*d.Δϵᵣ[:])); #TODO: check reshape vs [:]
 
         # Construct derivates
         δxb = δ(x̂, Backward, d.grid);
@@ -71,11 +71,11 @@ function solve(d::ModulatedDevice)
         @info "Calculating: system matrix"
         @info "Sidebands (freqs): $nsidebands ($nfrequencies)"
 
-        As = Array{SparseMatrixCSC}(nfrequencies);
-        Sxf = Array{SparseMatrixCSC}(d.sharedpml ? 1 : nfrequencies);
-        Sxb = Array{SparseMatrixCSC}(d.sharedpml ? 1 : nfrequencies);
-        Syf = Array{SparseMatrixCSC}(d.sharedpml ? 1 : nfrequencies);
-        Syb = Array{SparseMatrixCSC}(d.sharedpml ? 1 : nfrequencies);
+        As = Array{SparseMatrixCSC}(undef, nfrequencies);
+        Sxf = Array{SparseMatrixCSC}(undef, d.sharedpml ? 1 : nfrequencies);
+        Sxb = Array{SparseMatrixCSC}(undef, d.sharedpml ? 1 : nfrequencies);
+        Syf = Array{SparseMatrixCSC}(undef, d.sharedpml ? 1 : nfrequencies);
+        Syb = Array{SparseMatrixCSC}(undef, d.sharedpml ? 1 : nfrequencies);
         if d.sharedpml
             @info "PML: shared"
             (Sxf[1], Sxb[1], Syf[1], Syb[1]) = S_create(d.grid, ω);
@@ -92,13 +92,13 @@ function solve(d::ModulatedDevice)
         end
         if nsidebands > 0
             @info "Calculating: coupling matrix"
-            stencil_Cp = spdiagm([0.5*ωn[1:end-1].^2], [1], nfrequencies, nfrequencies);
+            stencil_Cp = spdiagm(1 => [0.5*ωn[1:end-1].^2]);
             Cp = kron(stencil_Cp, conj(TΔϵ));
-            stencil_Cm = spdiagm([0.5*ωn[2:end].^2],  [-1], nfrequencies, nfrequencies);
+            stencil_Cm = spdiagm(-1 => [0.5*ωn[2:end].^2]);
             Cm = kron(stencil_Cm, TΔϵ);
 
             @info "Calculating: total matrix"
-            A = blkdiag(As...) + Cp + Cm;
+            A = blockdiag(As...) + Cp + Cm;
         else
             A = As[1];
         end

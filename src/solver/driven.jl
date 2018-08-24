@@ -5,8 +5,8 @@ function solve(d::Device, pol::Polarization=TM)
     (ϵ₀, μ₀, c₀) = normalize_parameters(d);
 
     Nω = length(d.ω);
-    pol == TM && ( fields = Array{FieldTM}(Nω) );
-    pol == TE && ( fields = Array{FieldTE}(Nω) );
+    pol == TM && ( fields = Array{FieldTM}(undef, Nω) );
+    pol == TE && ( fields = Array{FieldTE}(undef, Nω) );
 
     for i in eachindex(d.ω)
         @info "Frequency: $i/$Nω"
@@ -18,9 +18,9 @@ function solve(d::Device, pol::Polarization=TM)
             setup_mode!(d, TM, ω, mode.neff, mode.pt, mode.dir, mode.width);
         end
 
-        Tϵ = spdiagm(ϵ₀*d.ϵᵣ[:]);
-        Tϵxi = spdiagm(1 ./ grid_average(ϵ₀*d.ϵᵣ, x̂)[:]);
-        Tϵyi = spdiagm(1 ./ grid_average(ϵ₀*d.ϵᵣ, ŷ)[:]);
+        Tϵ = sparse(Diagonal(ϵ₀*d.ϵᵣ[:]));
+        Tϵxi = sparse(Diagonal(1 ./ grid_average(ϵ₀*d.ϵᵣ, x̂)[:]));
+        Tϵyi = sparse(Diagonal(1 ./ grid_average(ϵ₀*d.ϵᵣ, ŷ)[:]));
 
         (Sxf, Sxb, Syf, Syb) = S_create(d.grid, ω);
 

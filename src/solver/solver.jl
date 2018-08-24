@@ -1,29 +1,32 @@
 using Pardiso
+using Dates
 
 function dolinearsolve(A::SparseMatrixCSC, b::Array, matrixsym::FDFDMatSymmetry)
-    tic();
+    time0 = now()
 
     @info "Solving linear system"
-    @info "Num unknowns: $(length(b))"
-
-    haskey(ENV, "OMP_NUM_THREADS") && @info "Num threads: " ENV["OMP_NUM_THREADS"]
+    @info "Unknowns: $(length(b))"
 
     if haskey(ENV, "FDFD_SOLVER") && lowercase(ENV["FDFD_SOLVER"]) == "pardiso"
         @info "Solver: Pardiso"
+        if haskey(ENV, "OMP_NUM_THREADS")
+            @info "Threads: $(ENV["OMP_NUM_THREADS"])"
+        else
+            @warn "OMP_NUM_THREADS was not set. Pardiso may not be using the expected number of cores."
+        end
+
 
         ps = PardisoSolver()
-        matrixsym == CNSym ? sym = Pardiso.COMPLEX_NONSYM : sym = Pardiso.COMPLEX_SYM
-        set_matrixtype!(ps, sym)
+        set_matrixtype!(ps, Pardiso.COMPLEX_NONSYM)
         x = Pardiso.solve(ps, A, b);
         set_phase!(ps, Pardiso.RELEASE_ALL)
         pardiso(ps)
     else
         @info "Solver: Julia"
-
-        x = lufact(A)\b
+        x = lu(A)\b
     end
 
-    @info "Solve time: $(toq()/60) minutes"
+    @info "Solve time: $(now()-time0)"
 
     return x
 end

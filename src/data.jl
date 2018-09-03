@@ -12,7 +12,7 @@ Base.size(A::Result) = size(A.data)
 Base.IndexStyle(A::Result) = IndexStyle(A.data)
 
 AxisArrays.axisdim(A::Result, ax) = axisdim(A.data, ax)
-AxisArrays.axes(A::Result, i...) = axes(A.data, i...)
+AxisArrays.axes(A::Result, i...) = AxisArrays.axes(A.data, i...)
 AxisArrays.axisnames(A::Result) = axisnames(A.data)
 AxisArrays.axisvalues(A::Result) = axisvalues(A.data)
 

@@ -37,18 +37,18 @@ Compute integral of flux normal to a surface defined by `center`, `width`, and
 function flux_surface_integral(field::Field, center::Point, width::Real, normal::Direction)
     if normal == x̂
         if isa(field, FieldTM)
-            xind = AxisArrays.axisindexes(axes(field)[XX], atvalue(center.x, atol=dx(field.grid)/2))
+            xind = AxisArrays.axisindexes(AxisArrays.axes(field)[XX], atvalue(center.x, atol=dx(field.grid)/2))
             yint = (center.y-width)..(center.y+width)
-            yind = AxisArrays.axisindexes(axes(field)[YY], yint)
+            yind = AxisArrays.axisindexes(AxisArrays.axes(field)[YY], yint)
             Ez   = view(field.data, xind:xind+1, yind, :Ez)
             Ez_x̂ = grid_average(Ez, x̂)[1,:]
             Hy   = view(field.data, xind, yind, :Hy);
             return sum(-0.5*real.(Ez_x̂.*conj(Hy)))*dy(field.grid)
         end
         if isa(field, FieldTE)
-            xind = AxisArrays.axisindexes(axes(field)[XX], atvalue(pt.x, atol=dx(field.grid)/2))
+            xind = AxisArrays.axisindexes(AxisArrays.axes(field)[XX], atvalue(pt.x, atol=dx(field.grid)/2))
             yint = (center.y-width)..(center.y+width)
-            yind = AxisArrays.axisindexes(axes(field)[YY], yint)
+            yind = AxisArrays.axisindexes(AxisArrays.axes(field)[YY], yint)
             Hz   = view(field.data, xind:xind+1, yind, :Hz)
             Hz_x̂ = grid_average(Hz, x̂)[1,:]
             Ey   = view(field.data, xind, yind, :Hy);

@@ -92,9 +92,9 @@ function solve(d::ModulatedDevice)
         end
         if nsidebands > 0
             @info "Calculating: coupling matrix"
-            stencil_Cp = spdiagm(1 => [0.5*ωn[1:end-1].^2]);
+            stencil_Cp = spdiagm( 1 => 0.5*ωn[1:end-1].^2);
             Cp = kron(stencil_Cp, conj(TΔϵ));
-            stencil_Cm = spdiagm(-1 => [0.5*ωn[2:end].^2]);
+            stencil_Cm = spdiagm(-1 => 0.5*ωn[2:end].^2);
             Cm = kron(stencil_Cm, TΔϵ);
 
             @info "Calculating: total matrix"

@@ -83,21 +83,21 @@ end
 
 xc(g::Grid, i::CartesianIndex{2}) = xc(g)[i.I[1]];
 yc(g::Grid, i::CartesianIndex{2}) = yc(g)[i.I[2]];
-xc(g::Grid, i::Int64) = xc(g)[ ind2sub(size(g),i)[1] ];
-yc(g::Grid, i::Int64) = yc(g)[ ind2sub(size(g),i)[2] ];
+xc(g::Grid, i::Int64) = xc(g)[ CartesianIndices(size(g))[i][1] ];
+yc(g::Grid, i::Int64) = yc(g)[ CartesianIndices(size(g))[i][2] ];
 
 function xe(g::Grid)
-	return g.bounds[1][1]+dx(g)*(0:1:g.N[1])
+	return g.bounds[1][1] .+ dx(g)*(0:1:g.N[1])
 end
 
 function ye(g::Grid{2})
-	return g.bounds[1][2]+dy(g)*(0:1:g.N[2])
+	return g.bounds[1][2] .+ dy(g)*(0:1:g.N[2])
 end
 
 xe(g::Grid, i::CartesianIndex{2}) = xe(g)[i.I[1]];
 ye(g::Grid, i::CartesianIndex{2}) = ye(g)[i.I[2]];
-xe(g::Grid, i::Int64) = xe(g)[ ind2sub(size(g),i)[1] ];
-ye(g::Grid, i::Int64) = ye(g)[ ind2sub(size(g),i)[2] ];
+xe(g::Grid, i::Int64) = xe(g)[ CartesianIndices(size(g))[i][1] ];
+ye(g::Grid, i::Int64) = ye(g)[ CartesianIndices(size(g))[i][2] ];
 
 "    coord2ind(g::Grid{D}, pt::Point)"
 function coord2ind(g::Grid{D}, pt::Point) where {D}

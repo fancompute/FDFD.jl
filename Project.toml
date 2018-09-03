@@ -6,6 +6,7 @@ version = "0.1.0"
 [deps]
 Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
 AxisArrays = "39de3d68-74b9-583c-8d2d-e117c070f3a9"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 GeometryPrimitives = "17051e67-205e-509e-8301-03b320b998e6"
 IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"

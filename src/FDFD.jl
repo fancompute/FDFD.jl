@@ -15,11 +15,7 @@ include("./solver/eigen.jl");
 include("./solver/modulation.jl");
 include("./solver/nonlinear.jl");
 
-export unwrap, set_log_level!
-
-global log_level = 1
-
-set_log_level!(level::Int) = global log_level = level
+export unwrap
 
 iscallable(f) = !isempty(methods(f))
 

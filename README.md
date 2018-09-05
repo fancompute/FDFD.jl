@@ -5,11 +5,12 @@
 FDFD.jl is a 2D finite difference frequency domain (FDFD) code written completely in Julia for solving Maxwell's equations. It also supports performing the linear solve steps with the Pardiso and MUMPS packages.
 
 ## Usage
-I will eventually develop better documentation for the package but for now, please see the included [Examples_FDFD_jl.ipynb](http://nbviewer.jupyter.org/github/ianwilliamson/FDFD.jl/blob/master/Examples_FDFD_jl.ipynb) notebook to get started with some barebones examples.
+I will eventually develop better documentation for the package but for now, please see the included [Examples_FDFD_jl.ipynb](http://nbviewer.jupyter.org/github/fancompute/FDFD.jl/blob/master/notebooks/Example_simulations.ipynb) notebook to get started with some barebones examples.
 
-I've detached the plotting functions into a separate module [FDFDViz.jl](https://github.com/ianwilliamson/FDFDViz.jl) to remove the PyPlot requirement.
+I've detached the plotting functions into a separate module [FDFDViz.jl](https://github.com/fancompute/FDFDViz.jl) to remove the PyPlot requirement.
 
 ## TODO
+- [x] Update for Julia 0.7/1.0
 - [x] Add support for MUMPS solver and allow user to select between MUMPS, Pardiso, and the Julia \ command
    - [ ] Determine why MUMPS will not parallelize
 - [x] Implement the frequency eigenvalue solver

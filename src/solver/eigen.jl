@@ -30,25 +30,25 @@ end
 
 "    eigenmode(d::AbstractDevice{2}, neff::Number, neigenvalues::Int)"
 function eigenmode(d::AbstractDevice{2}, neff::Number, neigenvalues::Int)
-    # (ϵ₀, μ₀, c₀) = normalize_parameters(d);
-    # ω = d.ω[1];
-    #
-    # Tϵx = sparse(Diagonal(ϵ₀*grid_average(d.ϵᵣ, x̂)[:]));
-    # Tϵy = sparse(Diagonal(ϵ₀*grid_average(d.ϵᵣ, ŷ)[:]));
-    # Tϵzinv = sparse(Diagonal((ϵ₀*grid_average(grid_average(d.ϵᵣ[:], x̂), ŷ)).^-1));
-    #
-    # δxb = δ(x̂, Backward, d.grid);
-    # δxf = δ(x̂, Forward,  d.grid);
-    # δyb = δ(ŷ, Backward, d.grid);
-    # δyf = δ(ŷ, Forward,  d.grid);
-    #
-    # A = ω^2*μ₀*blkdiag(Tϵy, Tϵx) + blkdiag(Tϵy, Tϵx)*vcat(-δyf, δxf)*Tϵzinv*hcat(-δyb, δxb) + vcat(δxb, δyb)*hcat(δxf, δyf);
-    #
-    # estimatedβ = ω/c₀*neff;
-    #
-    # (β², vectors) = eigs(A, nev=neigenvalues, sigma=estimatedβ^2);
-    #
-    # β = sqrt.(β²);
+    (ϵ₀, μ₀, c₀) = normalize_parameters(d);
+    ω = d.ω[1];
+
+    Tϵx    = sparse(Diagonal(ϵ₀*grid_average(d.ϵᵣ, x̂)[:]));
+    Tϵy    = sparse(Diagonal(ϵ₀*grid_average(d.ϵᵣ, ŷ)[:]));
+    Tϵzinv = sparse(Diagonal((ϵ₀*grid_average(grid_average(d.ϵᵣ, x̂), ŷ)[:]).^-1));
+
+    δxb = δ(x̂, Backward, d.grid);
+    δxf = δ(x̂, Forward,  d.grid);
+    δyb = δ(ŷ, Backward, d.grid);
+    δyf = δ(ŷ, Forward,  d.grid);
+
+    A = ω^2*μ₀*blkdiag(Tϵy, Tϵx) + blkdiag(Tϵy, Tϵx)*vcat(-δyf, δxf)*Tϵzinv*hcat(-δyb, δxb) + vcat(δxb, δyb)*hcat(δxf, δyf);
+
+    estimatedβ = ω/c₀*neff;
+
+    (β², vectors) = eigs(A, nev=neigenvalues, sigma=estimatedβ^2);
+
+    β = sqrt.(β²);
     # hx = vectors(1:length(d.grid), i);
     # hy = vectors(length(d.grid)+1:2*length(d.grid), i);
     # hz = -1im ./ β * (Dxf * hx + Dyf * hy);
@@ -72,7 +72,7 @@ function eigenfrequency(d::AbstractDevice, pol::Polarization, neigenvalues::Int;
     δyf = Syf*δ(ŷ, Forward,  d.grid);
 
     if pol == TM
-        fields = Array{FieldTM}(neigenvalues);
+        fields = Array{FieldTM}(undef, neigenvalues);
 
         Tϵᵣ⁻¹ = sparse(Diagonal(1 ./ d.ϵᵣ[:]));
         A = Tϵᵣ⁻¹*δxf*δxb + Tϵᵣ⁻¹*δyf*δyb;
@@ -89,7 +89,7 @@ function eigenfrequency(d::AbstractDevice, pol::Polarization, neigenvalues::Int;
         return (ω, fields)
     end
     if pol == TE
-        fields = Array{FieldTE}(neigenvalues);
+        fields = Array{FieldTE}(undef, neigenvalues);
 
         Tϵx⁻¹ = sparse(Diagonal(1 ./ grid_average(ϵ₀*d.ϵᵣ, x̂)[:]));
         Tϵy⁻¹ = sparse(Diagonal(1 ./ grid_average(ϵ₀*d.ϵᵣ, ŷ)[:]));

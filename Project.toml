@@ -1,7 +1,7 @@
 name = "FDFD"
 uuid = "47249150-a57d-11e8-0850-953555c55631"
 authors = ["Ian Williamson <iwill@stanford.edu>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"

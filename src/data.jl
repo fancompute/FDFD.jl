@@ -89,7 +89,7 @@ end
 
 function FieldAll(grid::Grid{2}, ω::Number, Ex::Array{<:Complex,1}, Ey::Array{<:Complex,1}, Ez::Array{<:Complex,1}, Hx::Array{<:Complex,1}, Hy::Array{<:Complex,1}, Hz::Array{<:Complex,1})
   	sz = size(grid);
-    return FieldAll(grid, ω, cat(3, reshape(Ex, sz), reshape(Ey, sz), reshape(Ez, sz), reshape(Hx, sz), reshape(Hy, sz), reshape(Hz, sz)))
+    return FieldAll(grid, ω, cat(reshape(Ex, sz), reshape(Ey, sz), reshape(Ez, sz), reshape(Hx, sz), reshape(Hy, sz), reshape(Hz, sz), dims=3))
 end
 
 # ============================================================================ #

@@ -34,7 +34,9 @@ function eigenmode(d::AbstractDevice{2}, neff::Number, neigenvalues::Int)
     ω = d.ω[1];
 
     Tϵx    = sparse(Diagonal(ϵ₀*grid_average(d.ϵᵣ, x̂)[:]));
+    Tϵxinv = sparse(Diagonal((ϵ₀*grid_average(d.ϵᵣ, x̂)[:]).^-1));
     Tϵy    = sparse(Diagonal(ϵ₀*grid_average(d.ϵᵣ, ŷ)[:]));
+    Tϵyinv = sparse(Diagonal((ϵ₀*grid_average(d.ϵᵣ, ŷ)[:]).^-1));
     Tϵzinv = sparse(Diagonal((ϵ₀*grid_average(grid_average(d.ϵᵣ, x̂), ŷ)[:]).^-1));
 
     δxb = δ(x̂, Backward, d.grid);
@@ -42,21 +44,25 @@ function eigenmode(d::AbstractDevice{2}, neff::Number, neigenvalues::Int)
     δyb = δ(ŷ, Backward, d.grid);
     δyf = δ(ŷ, Forward,  d.grid);
 
-    A = ω^2*μ₀*blkdiag(Tϵy, Tϵx) + blkdiag(Tϵy, Tϵx)*vcat(-δyf, δxf)*Tϵzinv*hcat(-δyb, δxb) + vcat(δxb, δyb)*hcat(δxf, δyf);
+    A = ω^2*μ₀*blockdiag(Tϵy, Tϵx) + blockdiag(Tϵy, Tϵx)*vcat(-δyf, δxf)*Tϵzinv*hcat(-δyb, δxb) + vcat(δxb, δyb)*hcat(δxf, δyf);
 
     estimatedβ = ω/c₀*neff;
 
     (β², vectors) = eigs(A, nev=neigenvalues, sigma=estimatedβ^2);
 
     β = sqrt.(β²);
-    # hx = vectors(1:length(d.grid), i);
-    # hy = vectors(length(d.grid)+1:2*length(d.grid), i);
-    # hz = -1im ./ β * (Dxf * hx + Dyf * hy);
-    #
-    # ex = 1 ./ (1i*omega) * T_eps_x^-1 * (Dyb * hz + gamma * hy);
-    # ey = 1 ./ (1i*omega) * T_eps_y^-1 * (-gamma * hx - Dxb * hz);
-    # ez = 1 ./ (1i*omega) * T_eps_z^-1 * (Dxb * hy - Dyb * hx);
-    return (β, vectors)
+    fields = Array{FieldAll}(undef, neigenvalues);
+    for i in 1:neigenvalues
+        hx = vectors[1:length(d.grid), i];
+        hy = vectors[length(d.grid)+1:2*length(d.grid), i];
+        hz = 1/(1im*β[i])*(δxf*hx+δyf*hy);
+        ex = 1/(1im*ω)*Tϵxinv*(δyb*hz+1im*β[i]*hy);
+        ey = 1/(1im*ω)*Tϵyinv*(-1im*β[i]*hx-δxb*hz);
+        ez = 1/(1im*ω)*Tϵzinv*(δxb*hy-δyb*hx);
+        fields[i] = FieldAll(d.grid, ω, ex, ey, ez, hx, hy, hz);
+    end
+
+    return (β, fields)
 end
 
 "    eigenfrequency(d::AbstractDevice, pol::Polarization, neigenvalues::Int; which::Symbol=:LM)"

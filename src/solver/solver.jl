@@ -15,8 +15,17 @@ function dolinearsolve(A::SparseMatrixCSC, b::Array, matrixsym::FDFDMatSymmetry)
             @warn "OMP_NUM_THREADS was not set. Pardiso may not be using the expected number of cores."
         end
 
-
-        ps = PardisoSolver()
+        # Prefer the MKL Pardiso solver over the vanilla Pardiso solver
+        ps = nothing
+        try
+            ps = MKLPardisoSolver()
+        catch e
+            if e isa LoadError
+                ps = PardisoSolver()
+            else
+                error("Error while loading the Pardiso solver.")
+            end
+        end
         set_matrixtype!(ps, Pardiso.COMPLEX_NONSYM)
         x = Pardiso.solve(ps, A, b);
         set_phase!(ps, Pardiso.RELEASE_ALL)
